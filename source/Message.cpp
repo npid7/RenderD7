@@ -1,35 +1,36 @@
+#include <renderd7/Color.hpp>
+#include <renderd7/DrawV2.hpp> // Update to Draw2
+#include <renderd7/Screen.hpp>
+#include <renderd7/Message.hpp>
+
 #include <algorithm>
 #include <memory>
-#include <renderd7/Color.hpp>
-#include <renderd7/Message.hpp>
-#include <renderd7/renderd7.hpp>
 #include <vector>
 
-extern bool rd7i_debugging;
+extern bool rd7_debugging;
 
-static std::vector<std::shared_ptr<RenderD7::Message>> msg_lst;
-static int fade_outs = 200;  // Start of fadeout
-static int idles = 60;       // start of Idle
-static int anim_len = 300;   // Full Length of Animation
+std::vector<std::shared_ptr<RenderD7::Message>> msg_lst;
+int fade_outs = 200; // Start of fadeout
+int idles = 60;      // start of Idle
+int anim_len = 300;  // Full Length of Animation
 
 R7Vec2 MakePos(int frame, int entry) {
   float fol = anim_len - fade_outs;
   if (frame > fade_outs)
     return R7Vec2(5, 240 - ((entry + 1) * 55) - 5 +
                          (float)((frame - fade_outs) / fol) * -20);
-  if (frame > idles) return R7Vec2(5, 240 - ((entry + 1) * 55) - 5);
+  if (frame > idles)
+    return R7Vec2(5, 240 - ((entry + 1) * 55) - 5);
   return R7Vec2(-150 + ((float)(frame / (float)idles) * 155),
                 240 - ((entry + 1) * 55) - 5);
 }
 
 namespace RenderD7 {
-float GetDeltaTime();  // Extern from renderd7.cpp
+float GetDeltaTime(); // Extern from renderd7.cpp
 
 void ProcessMessages() {
-  float tmp_txt = R2::GetTextSize();
-  R2::DefaultTextSize();
   // Draw in ovl mode
-  R2::OnScreen(R2Screen_Top);
+  RenderD7::OnScreen(Top);
   float fol = anim_len - fade_outs;
   std::reverse(msg_lst.begin(), msg_lst.end());
   for (size_t i = 0; i < msg_lst.size(); i++) {
@@ -40,23 +41,29 @@ void ProcessMessages() {
       // Thay get deleted!
       msg_lst.erase(msg_lst.begin() + i);
     } else {
+
       int new_alpha = 200;
       if (msg_lst[i]->animationframe > fade_outs) {
         new_alpha =
             200 - (float(msg_lst[i]->animationframe - fade_outs) / fol) * 200;
       }
       // Wtf is this function lol
-      auto bgc = RenderD7::Color::RGBA(RD7Color_MessageBackground)
-                     .changeA(new_alpha)
-                     .toRGBA();
-      auto tc =
-          RenderD7::Color::RGBA(RD7Color_Text2).changeA(new_alpha).toRGBA();
-      R2::AddRect(pos, R7Vec2(150, 50), bgc);
-      R2::AddText(pos + R7Vec2(5, 1), msg_lst[i]->title, tc);
-      R2::AddText(pos + R7Vec2(5, 17), msg_lst[i]->message, tc);
-      if (rd7i_debugging)
-        R2::AddText(pos + R7Vec2(155, 1),
-                      std::to_string(msg_lst[i]->animationframe), tc);
+      RenderD7::CustomizeColor(RD7Color_MessageBackground,
+                               RenderD7::Color::RGBA(RD7Color_MessageBackground)
+                                   .changeA(new_alpha)
+                                   .toRGBA());
+      RenderD7::CustomizeColor(
+          RD7Color_Text,
+          RenderD7::Color::RGBA(RD7Color_Text2).changeA(new_alpha).toRGBA());
+      RenderD7::Draw2::RFS(pos, R7Vec2(150, 50),
+                           RenderD7::StyleColor(RD7Color_MessageBackground));
+      RenderD7::Draw2::Text(pos + R7Vec2(5, 1), msg_lst[i]->title);
+      RenderD7::Draw2::Text(pos + R7Vec2(5, 17), msg_lst[i]->message);
+      if (rd7_debugging)
+        RenderD7::Draw2::Text(pos + R7Vec2(155, 1),
+                              std::to_string(msg_lst[i]->animationframe));
+      RenderD7::UndoColorEdit(RD7Color_Text);
+      RenderD7::UndoColorEdit(RD7Color_MessageBackground);
       // Why Frameadd? because Message uses int as frame and
       // It seems that lower 0.5 will be rounded to 0
       // Why not replace int with float ?
@@ -78,7 +85,6 @@ void ProcessMessages() {
   // ReReverse ?? lol
   // Cause otherwise the Toasts will swap
   std::reverse(msg_lst.begin(), msg_lst.end());
-  R2::SetTextSize(tmp_txt);
 }
 
 void PushMessage(const Message &msg) {
@@ -87,9 +93,7 @@ void PushMessage(const Message &msg) {
 
 void SetMessageIdleStartFrame(int frame) { idles = frame; }
 
-void SetMessageTotalAnimationFrames(int total_frames) {
-  anim_len = total_frames;
-}
+void SetMessageTotalAnimationFrames(int total_frames) { anim_len = total_frames; }
 
 void SetMessageFadeOutStartFrame(int frame) { fade_outs = frame; }
-}  // namespace RenderD7
+} // namespace RenderD7

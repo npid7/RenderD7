@@ -18,7 +18,8 @@ struct Entry {
 /// @return The Vector of found Entrys
 std::vector<RenderD7::FileSystem::Entry> GetDirContent(std::string path);
 std::string GetParentPath(std::string path, std::string mount_point);
-std::vector<Entry> GetDirContentsExt(
-    std::string &path, const std::vector<std::string> &extensions);
-}  // namespace FileSystem
-}  // namespace RenderD7
+std::vector<Entry>
+GetDirContentsExt(std::string &path,
+                  const std::vector<std::string> &extensions);
+} // namespace FileSystem
+} // namespace RenderD7

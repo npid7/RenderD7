@@ -2,20 +2,24 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <functional>
 #include <memory>
-#include <renderd7/smart_ctor.hpp>
+#include <regex>
+#include <sstream>
 #include <string>
-#include <vector>
 
-#define UNPACK_RGBA(col) \
-  (unsigned char)(col >> 24), (col >> 16), (col >> 8), (col)
-#define UNPACK_BGRA(col) \
-  (unsigned char)(col >> 8), (col >> 16), (col >> 24), (col)
-
-inline unsigned int RGBA8(unsigned char r, unsigned char g, unsigned char b,
-                          unsigned char a = 255) {
-  return (r | g << 8 | b << 16 | a << 24);
+#define UNPACK_RGBA(col) (uint8_t)(col >> 24), (col >> 16), (col >> 8), (col)
+#define UNPACK_BGRA(col) (uint8_t)(col >> 8), (col >> 16), (col >> 24), (col)
+// it is actually not RGBA lol
+inline uint32_t RGBA8(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) {
+#define ISIMPLEPAK(x, y) (((x) & 0xff) << y)
+  return (ISIMPLEPAK(r, 0) | ISIMPLEPAK(g, 8) | ISIMPLEPAK(b, 16) |
+          ISIMPLEPAK(a, 24));
 }
+
+/*#define RGBA8(r, g, b, a) \
+  ((((r)&0xFF) << 0) | (((g)&0xFF) << 8) | (((b)&0xFF) << 16) |                \
+   (((a)&0xFF) << 24))*/
 
 typedef int RD7Color;
 
@@ -44,70 +48,33 @@ enum RD7Color_ {
   RD7Color_TextDisabled,  /// Text Disabled Color
   RD7Color_Text2,         ///< And This want for Texts on Dark Backgrounds
   RD7Color_Background,    ///< Your Bg Color
-  RD7Color_Header,    ///< Header Color (if the header is dark text2 is used)
-  RD7Color_Selector,  ///< Selector Color
-  RD7Color_SelectorFade,       ///< Selector FadingTo Color
-  RD7Color_List0,              ///< List Color1
-  RD7Color_List1,              ///< List Color2
-  RD7Color_MessageBackground,  ///< Message Background
-  RD7Color_Button,             ///< Button Color
-  RD7Color_ButtonHovered,      ///< Button Color if Hovered
-  RD7Color_ButtonDisabled,     ///< Button Color if disabled
-  RD7Color_ButtonActive,       ///< Button Colkor if Clicked
-  RD7Color_Checkmark,          ///< Checkbox Checkmark Color
-  RD7Color_FrameBg,            ///< Frame Background Color
-  RD7Color_FrameBgHovered,     ///< Frame Background Color if hovered
-  RD7Color_Progressbar,        ///< Progressbar Color
-  /// NON COLOR ///
-  RD7Color_Len,  ///< Used to define the lengh of this list
+  RD7Color_Header,  ///< Header Color (if the header is dark text2 is used)
+  RD7Color_Selector,
+  RD7Color_SelectorFade,
+  RD7Color_List0,
+  RD7Color_List1,
+  RD7Color_MessageBackground,
+  RD7Color_Button,
+  RD7Color_ButtonHovered,
+  RD7Color_ButtonDisabled,
+  RD7Color_ButtonActive,
+  RD7Color_Checkmark,
+  RD7Color_FrameBg,
+  RD7Color_FrameBgHovered,
+  RD7Color_Progressbar,
 };
 
 namespace RenderD7 {
-class Theme {
- public:
-  Theme() = default;
-  ~Theme() = default;
-
-  void Load(const std::string &path);
-  void Default();
-  void Save(const std::string &path);
-
-  unsigned int Get(RD7Color clr);
-  void Set(RD7Color clr, unsigned int v);
-  void Swap(RD7Color a, RD7Color b);
-  bool Undo();
-  void UndoAll();
-  void TextBy(RD7Color bg);
-  RD7Color AutoText(RD7Color bg);
-  void ClearHistory() { changes.clear(); }
-
-  std::vector<unsigned int> &GetTableRef() { return clr_tab; }
-  // For Smart Pointer
-  RD7_SMART_CTOR(Theme);
-
-  // Loader method
-  void CopyOther(Theme::Ref theme);
-
- private:
-  struct change {
-    change(RD7Color a, unsigned int f, unsigned int t)
-        : clr(a), from(f), to(t) {}
-    change(RD7Color a, RD7Color b, unsigned int f, unsigned int t)
-        : clr(a), clr2(b), from(f), to(t) {}
-    RD7Color clr;
-    RD7Color clr2 = 0;  // Used if Swap
-    unsigned int from;
-    unsigned int to;
-  };
-  // Use a vector for faster access
-  std::vector<unsigned int> clr_tab;
-  std::vector<change> changes;
-};
-
-Theme::Ref ThemeActive();
-/// @brief Change Theme Adress
-/// @param theme your adress
-void ThemeSet(Theme::Ref theme);
+unsigned int StyleColor(RD7Color color);
+void RedirectColor(RD7Color to, RD7Color from);
+void TextColorByBg(RD7Color background);
+/// @brief Customices a color until undone
+/// For example with RebderD7::Color::Hex
+void CustomizeColor(RD7Color color, unsigned int custom);
+/// @brief Completly changes a theme color
+void ColorNew(RD7Color color, unsigned int new_color);
+void UndoColorEdit(RD7Color color);
+void UndoAllColorEdits();
 namespace Color {
 /// @brief RGBA Class
 class RGBA {
@@ -117,7 +84,7 @@ class RGBA {
   /// @param g
   /// @param b
   /// @param a
-  RGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a = 255)
+  RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
       : m_r(r), m_g(g), m_b(b), m_a(a) {}
   /// @brief Construct
   /// @param r
@@ -134,8 +101,7 @@ class RGBA {
     m_a = ISIMPLEUNPAK(in, 24);
   }
   RGBA(RD7Color in) {
-    if (!RenderD7::ThemeActive()) return;
-    unsigned int col = RenderD7::ThemeActive()->Get(in);
+    unsigned int col = RenderD7::StyleColor(in);
     m_r = ISIMPLEUNPAK(col, 0);
     m_g = ISIMPLEUNPAK(col, 8);
     m_b = ISIMPLEUNPAK(col, 16);
@@ -172,7 +138,7 @@ class RGBA {
 
   /// @brief Get as Uint32
   /// @return color
-  unsigned int toRGBA() const { return RGBA8(m_r, m_g, m_b, m_a); }
+  uint32_t toRGBA() const { return RGBA8(m_r, m_g, m_b, m_a); }
 
   // Just calculate the "lightness" f.e. to use Text or Text2
   float luminance() const {
@@ -186,9 +152,8 @@ class RGBA {
     return (luminance() >= 0.5);
   }
 
-  unsigned char m_r = 0, m_g = 0, m_b = 0, m_a = 0;
+  uint8_t m_r, m_g, m_b, m_a;
 };
-std::string RGBA2Hex(unsigned int c32);
 /// @brief Convert RGB to Hex
 /// @param r
 /// @param g
@@ -199,6 +164,6 @@ std::string RGB2Hex(int r, int g, int b);
 /// @param color
 /// @param a
 /// @return Color32
-unsigned int Hex(const std::string &color, unsigned char a = 255);
+uint32_t Hex(const std::string &color, uint8_t a = 255);
 }  // namespace Color
 }  // namespace RenderD7

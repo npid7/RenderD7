@@ -3,21 +3,18 @@
 
 namespace RenderD7 {
 class Parameter {
- private:
+private:
   using id = size_t;
 
-  template <typename T>
-  struct type {
+  template <typename T> struct type {
     static void id() {}
   };
 
-  template <typename T>
-  static id type_id() {
+  template <typename T> static id type_id() {
     return reinterpret_cast<id>(&type<T>::id);
   }
 
-  template <typename T>
-  using decay = typename std::decay<T>::type;
+  template <typename T> using decay = typename std::decay<T>::type;
 
   template <typename T>
   using none =
@@ -29,8 +26,7 @@ class Parameter {
     virtual base *copy() const = 0;
   } *p = nullptr;
 
-  template <typename T>
-  struct data : base, std::tuple<T> {
+  template <typename T> struct data : base, std::tuple<T> {
     using std::tuple<T>::tuple;
 
     T &get() & { return std::get<0>(*this); }
@@ -40,27 +36,19 @@ class Parameter {
     base *copy() const override { return new data{get()}; }
   };
 
-  template <typename T>
-  T &stat() {
-    return static_cast<data<T> &>(*p).get();
-  }
+  template <typename T> T &stat() { return static_cast<data<T> &>(*p).get(); }
 
-  template <typename T>
-  T const &stat() const {
+  template <typename T> T const &stat() const {
     return static_cast<data<T> const &>(*p).get();
   }
 
-  template <typename T>
-  T &dyn() {
-    return dynamic_cast<data<T> &>(*p).get();
-  }
+  template <typename T> T &dyn() { return dynamic_cast<data<T> &>(*p).get(); }
 
-  template <typename T>
-  T const &dyn() const {
+  template <typename T> T const &dyn() const {
     return dynamic_cast<data<T> const &>(*p).get();
   }
 
- public:
+public:
   /**
    * @brief Default constructor
    */
@@ -114,8 +102,7 @@ class Parameter {
    * @tparam T The type to check
    * @return   Whether the Parameter has the given type or not
    */
-  template <typename T>
-  bool is() const {
+  template <typename T> bool is() const {
     return p ? p->is(type_id<T>()) : false;
   }
 
@@ -126,9 +113,6 @@ class Parameter {
    * @warning If the type of the Parameter doesn't match the type of it's stored
    * value, it will result in undefined behaviour.
    */
-  template <typename T>
-  T &get() & {
-    return stat<T>();
-  }
+  template <typename T> T &get() & { return stat<T>(); }
 };
-}  // namespace RenderD7
+} // namespace RenderD7

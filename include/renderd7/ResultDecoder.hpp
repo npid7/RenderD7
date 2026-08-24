@@ -1,12 +1,11 @@
 #pragma once
 #include <3ds.h>
-
 #include <string>
 
 namespace RenderD7 {
 /// @brief Decoder for 3ds Result Codes
 class ResultDecoder {
- public:
+public:
   /// @brief Constructor
   ResultDecoder() {}
   /// @brief Deconstructor
@@ -47,8 +46,8 @@ class ResultDecoder {
   /// @brief Write a Result log file to sd
   void WriteLog(void);
 
- private:
+private:
   /// @param m_rescode Result code
   Result m_rescode;
 };
-}  // namespace RenderD7
+} // namespace RenderD7

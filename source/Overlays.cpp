@@ -1,8 +1,9 @@
+#include <renderd7/DrawV2.hpp>
 #include <renderd7/FunctionTrace.hpp>
 #include <renderd7/Hid.hpp>
 #include <renderd7/Overlays.hpp>
-#include <renderd7/internal_db.hpp>
 #include <renderd7/renderd7.hpp>
+#include <renderd7/internal_db.hpp>
 
 ///////////////////////////////
 struct Key {
@@ -21,30 +22,6 @@ struct Key {
   int action = 0;
 };
 
-std::vector<Key> keyboard_layout_num{
-    // 1st row
-    {"7", R7Vec2(5, 135), R7Vec2(36, 24), 0},
-    {"8", R7Vec2(43, 135), R7Vec2(36, 24), 0},
-    {"9", R7Vec2(81, 135), R7Vec2(36, 24), 0},
-    // 2nd row
-    {"4", R7Vec2(5, 161), R7Vec2(36, 24), 0},
-    {"5", R7Vec2(43, 161), R7Vec2(36, 24), 0},
-    {"6", R7Vec2(81, 161), R7Vec2(36, 24), 0},
-    // 3rd row
-    {"1", R7Vec2(5, 187), R7Vec2(36, 24), 0},
-    {"2", R7Vec2(43, 187), R7Vec2(36, 24), 0},
-    {"3", R7Vec2(81, 187), R7Vec2(36, 24), 0},
-
-    // 4th row
-    {"0", R7Vec2(5, 213), R7Vec2(74, 24), 0},
-    {".", R7Vec2(81, 213), R7Vec2(36, 24), 0},
-    // additional actions
-    {"<---", R7Vec2(119, 135), R7Vec2(74, 24), 2},
-    //{"", R7Vec2(119, 161), R7Vec2(74, 24), 0},
-    {"Confirm", R7Vec2(119, 187), R7Vec2(74, 24), 5},
-    {"Cancel", R7Vec2(119, 213), R7Vec2(74, 24), 4},
-};
-
 std::vector<Key> keyboard_layout = {
     // 1st row
     {"`", R7Vec2(5, 137), R7Vec2(18, 18), 0},
@@ -60,7 +37,7 @@ std::vector<Key> keyboard_layout = {
     {"0", R7Vec2(205, 137), R7Vec2(18, 18), 0},
     {"-", R7Vec2(225, 137), R7Vec2(18, 18), 0},
     {"=", R7Vec2(245, 137), R7Vec2(18, 18), 0},
-    {"<---", R7Vec2(265, 137), R7Vec2(50, 18), 2},
+    {"Bksp", R7Vec2(265, 137), R7Vec2(50, 18), 2},
     // 2nd row
     {"Tab", R7Vec2(5, 157), R7Vec2(40, 18), 6},
     {"q", R7Vec2(47, 157), R7Vec2(18, 18), 0},
@@ -130,7 +107,7 @@ std::vector<Key> keyboard_layout_caps = {
     {"0", R7Vec2(205, 137), R7Vec2(18, 18), 0},
     {"-", R7Vec2(225, 137), R7Vec2(18, 18), 0},
     {"=", R7Vec2(245, 137), R7Vec2(18, 18), 0},
-    {"<---", R7Vec2(265, 137), R7Vec2(50, 18), 2},
+    {"Bksp", R7Vec2(265, 137), R7Vec2(50, 18), 2},
     // 2nd row
     {"Tab", R7Vec2(5, 157), R7Vec2(40, 18), 6},
     {"Q", R7Vec2(47, 157), R7Vec2(18, 18), 0},
@@ -200,7 +177,7 @@ std::vector<Key> keyboard_layout_shift = {
     {")", R7Vec2(205, 137), R7Vec2(18, 18), 0},
     {"_", R7Vec2(225, 137), R7Vec2(18, 18), 0},
     {"+", R7Vec2(245, 137), R7Vec2(18, 18), 0},
-    {"<---", R7Vec2(265, 137), R7Vec2(50, 18), 2},
+    {"Bksp", R7Vec2(265, 137), R7Vec2(50, 18), 2},
     // 2nd row
     {"Tab", R7Vec2(5, 157), R7Vec2(40, 18), 6},
     {"Q", R7Vec2(47, 157), R7Vec2(18, 18), 0},
@@ -256,7 +233,7 @@ std::vector<Key> keyboard_layout_shift = {
 };
 
 // From UI7
-bool UI7_InBox(R7Vec2 inpos, R7Vec2 boxpos, R7Vec2 boxsize) {
+bool StolenInBox(R7Vec2 inpos, R7Vec2 boxpos, R7Vec2 boxsize) {
   if ((inpos.x > boxpos.x) && (inpos.y > boxpos.y) &&
       (inpos.x < boxpos.x + boxsize.x) && (inpos.y < boxpos.y + boxsize.y))
     return true;
@@ -267,22 +244,18 @@ namespace RenderD7 {
 Ovl_Ftrace::Ovl_Ftrace(bool* is_enabled) { i_is_enabled = is_enabled; }
 
 void Ovl_Ftrace::Draw(void) const {
-  float tmp_txt = R2::GetTextSize();
-  R2::DefaultTextSize();
-  R2::OnScreen(R2Screen_Top);
-  RenderD7::Color::RGBA bg(RD7Color_Background);
-  bg.changeA(150);
-  R2::AddRect(R7Vec2(0, 0), R7Vec2(400, 20), bg.toRGBA());
-
+  RenderD7::OnScreen(Top);
+  RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 20),
+                       RenderD7::StyleColor(RD7Color_Background));
+  
   std::vector<RenderD7::Ftrace::FTRes> dt;
-  for (auto const& it : RenderD7::Ftrace::rd7_traces)
-    if (it.second.is_ovl && dt.size() < 10) dt.push_back(it.second);
-  for (size_t i = 0; i < (dt.size() < 10 ? dt.size() : 10); i++) {
-    R2::AddText(R7Vec2(5, 30 + i * 15), dt[i].func_name, RD7Color_Text);
-    R2::AddText(R7Vec2(295, 30 + i * 15), RenderD7::MsTimeFmt(dt[i].time_of),
-                  RD7Color_Text);
+  for(auto const& it : RenderD7::Ftrace::rd7_traces)
+    if(it.second.is_ovl && dt.size()<10)
+      dt.push_back(it.second);
+  for(size_t i = 0; i < (dt.size() < 10 ? dt.size() : 10); i++) {
+    RenderD7::Draw2::Text(R7Vec2(5, 30 + i*15), dt[i].func_name);
+    RenderD7::Draw2::Text(R7Vec2(295, 30 + i*15), RenderD7::MsTimeFmt(dt[i].time_of));
   }
-  R2::SetTextSize(tmp_txt);
 }
 
 void Ovl_Ftrace::Logic() {
@@ -299,15 +272,18 @@ Ovl_Metrik::Ovl_Metrik(bool* is_enabled, bool* screen, uint32_t* mt_color,
 }
 
 void Ovl_Metrik::Draw(void) const {
-  float tmp_txt = R2::GetTextSize();
-  R2::DefaultTextSize();
-  R2::OnScreen(i_screen[0] ? R2Screen_Bottom : R2Screen_Top);
+  if (i_screen[0]) {
+    RenderD7::OnScreen(Bottom);
+  } else {
+    RenderD7::OnScreen(Top);
+  }
   std::string info =
       "RenderD7 " + std::string(RENDERD7VSTRING) + " Debug Overlay";
-  float dim_y = R2::GetTextDimensions(info).y;
+  float dim_y = RenderD7::GetTextDimensions(info).y;
   float infoy = 240 - dim_y;
   mt_fps = "FPS: " + RenderD7::GetFramerate();
-  if (rd7i_idb_running) mt_fps += " IDB -> ON";
+  if(rd7i_idb_running)
+    mt_fps += " IDB -> ON";
   mt_cpu = "CPU: " +
            std::to_string(C3D_GetProcessingTime() * (RenderD7::GetFps() / 10))
                .substr(0, 4) +
@@ -321,71 +297,53 @@ void Ovl_Metrik::Draw(void) const {
       "%";
   mt_lfr = "Linear: " + RenderD7::FormatBytes(linearSpaceFree());
   mt_tbs =
-      "TextBuf: " + std::to_string(C2D_TextBufGetNumGlyphs(rd7i_text_buffer)) +
-      "/4096";
-  if (rd7i_enable_memtrack)
-    mt_mem = "Mem: " + RenderD7::FormatBytes(RenderD7::Memory::GetCurrent()) +
-             " | " +
-             RenderD7::FormatBytes(RenderD7::Memory::GetTotalAllocated()) +
-             " | " + RenderD7::FormatBytes(RenderD7::Memory::GetTotalFreed());
-  R2::AddRect(R7Vec2(0, 0), R2::GetTextDimensions(mt_fps),
-                (unsigned int)i_mt_color[0]);
-  R2::AddRect(R7Vec2(0, 50), R2::GetTextDimensions(mt_cpu),
-                (unsigned int)i_mt_color[0]);
-  R2::AddRect(R7Vec2(0, 50 + dim_y * 1), R2::GetTextDimensions(mt_gpu),
-                (unsigned int)i_mt_color[0]);
-  R2::AddRect(R7Vec2(0, 50 + dim_y * 2), R2::GetTextDimensions(mt_cmd),
-                (unsigned int)i_mt_color[0]);
-  R2::AddRect(R7Vec2(0, 50 + dim_y * 3), R2::GetTextDimensions(mt_lfr),
-                (unsigned int)i_mt_color[0]);
-  R2::AddRect(R7Vec2(0, 50 + dim_y * 4), R2::GetTextDimensions(mt_tbs),
-                (unsigned int)i_mt_color[0]);
-  if (rd7i_enable_memtrack)
-    R2::AddRect(R7Vec2(0, 50 + dim_y * 5), R2::GetTextDimensions(mt_mem),
-                  (unsigned int)i_mt_color[0]);
-  R2::AddRect(R7Vec2(0, infoy), R2::GetTextDimensions(info),
-                (unsigned int)i_mt_color[0]);
-  R2::AddText(R7Vec2(0, 0), mt_fps, (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50), mt_cpu, (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 1), mt_gpu,
-                (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 2), mt_cmd,
-                (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 3), mt_lfr,
-                (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 4), mt_tbs,
-                (unsigned int)i_txt_color[0]);
-  if (rd7i_enable_memtrack)
-    R2::AddText(R7Vec2(0, 50 + dim_y * 5), mt_mem,
-                  (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, infoy), info, (unsigned int)i_txt_color[0]);
+      "TextBuf: " + std::to_string(C2D_TextBufGetNumGlyphs(rd7i_text_buffer)) + "/4096";
+  RenderD7::Draw2::RFS(R7Vec2(0, 0), RenderD7::GetTextDimensions(mt_fps),
+                       i_mt_color[0]);
+  RenderD7::Draw2::RFS(R7Vec2(0, 50), RenderD7::GetTextDimensions(mt_cpu),
+                       i_mt_color[0]);
+  RenderD7::Draw2::RFS(R7Vec2(0, 50 + dim_y * 1),
+                       RenderD7::GetTextDimensions(mt_gpu), i_mt_color[0]);
+  RenderD7::Draw2::RFS(R7Vec2(0, 50 + dim_y * 2),
+                       RenderD7::GetTextDimensions(mt_cmd), i_mt_color[0]);
+  RenderD7::Draw2::RFS(R7Vec2(0, 50 + dim_y * 3),
+                       RenderD7::GetTextDimensions(mt_lfr), i_mt_color[0]);
+  RenderD7::Draw2::RFS(R7Vec2(0, 50 + dim_y * 4),
+                       RenderD7::GetTextDimensions(mt_tbs), i_mt_color[0]);
+  RenderD7::Draw2::RFS(R7Vec2(0, infoy), RenderD7::GetTextDimensions(info),
+                       i_mt_color[0]);
+  RenderD7::CustomizeColor(RD7Color_Text, i_txt_color[0]);
+  RenderD7::Draw2::Text(R7Vec2(0, 0), mt_fps);
+  RenderD7::Draw2::Text(R7Vec2(0, 50), mt_cpu);
+  RenderD7::Draw2::Text(R7Vec2(0, 50 + dim_y * 1), mt_gpu);
+  RenderD7::Draw2::Text(R7Vec2(0, 50 + dim_y * 2), mt_cmd);
+  RenderD7::Draw2::Text(R7Vec2(0, 50 + dim_y * 3), mt_lfr);
+  RenderD7::Draw2::Text(R7Vec2(0, 50 + dim_y * 4), mt_tbs);
+  RenderD7::Draw2::Text(R7Vec2(0, infoy), info);
+  RenderD7::UndoColorEdit(RD7Color_Text);
 
   // Force Bottom (Debug Touchpos)
-  R2::OnScreen(R2Screen_Bottom);
+  RenderD7::OnScreen(Bottom);
   if (Hid::IsEvent("touch", Hid::Held)) {
-    R2::AddLine(R7Vec2(Hid::GetTouchPosition().x, 0),
-                  R7Vec2(Hid::GetTouchPosition().x, 240),
-                  RenderD7::Color::Hex("#ff0000"));
-    R2::AddLine(R7Vec2(0, Hid::GetTouchPosition().y),
-                  R7Vec2(320, Hid::GetTouchPosition().y),
-                  RenderD7::Color::Hex("#ff0000"));
+    RenderD7::Draw2::Line(R7Vec2(Hid::GetTouchPosition().x, 0),
+                          R7Vec2(Hid::GetTouchPosition().x, 240),
+                          RenderD7::Color::Hex("#ff0000"));
+    RenderD7::Draw2::Line(R7Vec2(0, Hid::GetTouchPosition().y),
+                          R7Vec2(320, Hid::GetTouchPosition().y),
+                          RenderD7::Color::Hex("#ff0000"));
   }
-  R2::SetTextSize(tmp_txt);
 }
 
 void Ovl_Metrik::Logic() {
   if (!i_is_enabled[0]) this->Kill();
 }
 
-Ovl_Keyboard::Ovl_Keyboard(std::string& ref, RD7KeyboardState& state,
-                           const std::string& hint, RD7Keyboard type) {
+Ovl_Keyboard::Ovl_Keyboard(std::string& ref, const std::string& hint,
+                           RD7Keyboard type) {
   // Blocks All Input outside of Keyboard
   // Doesnt work for Hidkeys down etc
   RenderD7::Hid::Lock();
   typed_text = &ref;
-  this->state = &state;
-  this->type = type;
-  *this->state = RD7KeyboardState_None;
   str_bak = ref;
   ft3 = 0;
 }
@@ -396,36 +354,35 @@ Ovl_Keyboard::~Ovl_Keyboard() {
 }
 
 void Ovl_Keyboard::Draw(void) const {
-  float tmp_txt = R2::GetTextSize();
-  R2::DefaultTextSize();
-  if (ft3 > 5) RenderD7::Hid::Unlock();
-  auto key_table =
-      (type == RD7Keyboard_Numpad) ? keyboard_layout_num : keyboard_layout;
+  if(ft3 > 5)
+    RenderD7::Hid::Unlock();
+  auto key_table = keyboard_layout;
   if (mode == 1)
     key_table = keyboard_layout_caps;
   else if (mode == 2)
     key_table = keyboard_layout_shift;
-  R2::OnScreen(R2Screen_Top);
-  R2::AddRect(R7Vec2(0, 0), R7Vec2(400, 240),
-                RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
-  R2::OnScreen(R2Screen_Bottom);
-  R2::AddRect(R7Vec2(0, 0), R7Vec2(320, 112),
-                RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
-  R2::AddRect(R7Vec2(0, 112), R7Vec2(320, 128), RD7Color_FrameBg);
-  R2::AddRect(R7Vec2(0, 112), R7Vec2(320, 20), RD7Color_Header);
-  R2::AddText(R7Vec2(5, 114), "> " + *typed_text,
-                RenderD7::ThemeActive()->AutoText(RD7Color_Header));
+  RenderD7::OnScreen(Top);
+  RenderD7::Draw2::RFS(
+      R7Vec2(0, 0), R7Vec2(400, 240),
+      RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
+  RenderD7::OnScreen(Bottom);
+  RenderD7::Draw2::RFS(
+      R7Vec2(0, 0), R7Vec2(320, 112),
+      RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
+  RenderD7::Draw2::RFS(R7Vec2(0, 112), R7Vec2(320, 128),
+                       RenderD7::StyleColor(RD7Color_FrameBg));
+  RenderD7::Draw2::RFS(R7Vec2(0, 112), R7Vec2(320, 20),
+                       RenderD7::StyleColor(RD7Color_Header));
+  RenderD7::TextColorByBg(RD7Color_Header);
+  RenderD7::Draw2::Text(R7Vec2(5, 114), "> " + *typed_text);
+  RenderD7::UndoColorEdit(RD7Color_Text);
   for (auto const& it : key_table) {
-    R7Vec2 szs = it.size;
-    R7Vec2 pos = it.pos;
-    R7Vec2 txtdim = R2::GetTextDimensions(it.disp);
+    R7Vec2 txtdim = RenderD7::GetTextDimensions(it.disp);
+    R7Vec2 txtpos = R7Vec2(it.pos.x + it.size.x * 0.5 - txtdim.x * 0.5,
+                           it.pos.y + it.size.y * 0.5 - txtdim.y * 0.5);
     RD7Color btn = RD7Color_Button;
-    if (RenderD7::Hid::IsEvent("cancel", RenderD7::Hid::Up)) {
-      RenderD7::Hid::Clear();
-      shared_data[0x05] = 1;
-    }
     if (RenderD7::Hid::IsEvent("touch", RenderD7::Hid::Up) &&
-        UI7_InBox(RenderD7::Hid::GetLastTouchPosition(), pos, szs)) {
+        StolenInBox(RenderD7::Hid::GetLastTouchPosition(), it.pos, it.size)) {
       if (mode == 2)  // Request Disable Shift
         shared_data[0x02] = 1;
 
@@ -448,18 +405,17 @@ void Ovl_Keyboard::Draw(void) const {
       else if (it.action == 8)
         shared_data[0x09] = 1;
     } else if (RenderD7::Hid::IsEvent("touch", RenderD7::Hid::Held) &&
-               UI7_InBox(RenderD7::Hid::GetTouchPosition(), it.pos, it.size)) {
+               StolenInBox(RenderD7::Hid::GetTouchPosition(), it.pos,
+                           it.size)) {
       btn = RD7Color_ButtonHovered;
-      pos -= R7Vec2(1, 1);
-      szs += R7Vec2(2, 2);
     }
-    R7Vec2 txtpos = R7Vec2(pos.x + szs.x * 0.5 - txtdim.x * 0.5,
-                           pos.y + szs.y * 0.5 - txtdim.y * 0.5);
-    R2::AddRect(pos, szs, btn);
-    R2::AddText(txtpos, it.disp, RenderD7::ThemeActive()->AutoText(btn));
+    RenderD7::Draw2::RFS(it.pos, it.size, RenderD7::StyleColor(btn));
+    RenderD7::TextColorByBg(btn);
+    RenderD7::Draw2::Text(txtpos, it.disp);
+    RenderD7::UndoColorEdit(RD7Color_Text);
   }
-  if (ft3 > 5) RenderD7::Hid::Lock();
-  R2::SetTextSize(tmp_txt);
+  if(ft3 > 5)
+    RenderD7::Hid::Lock();
 }
 
 void Ovl_Keyboard::Logic() {
@@ -477,13 +433,11 @@ void Ovl_Keyboard::Logic() {
       // Enter
     } else if (it.first == 0x05) {
       *typed_text = str_bak;
-      *state = RD7KeyboardState_Cancel;
       this->Kill();
     } else if (it.first == 0x06) {
-      *state = RD7KeyboardState_Confirm;
       this->Kill();
     } else if (it.first == 0x07) {
-      // this->typed_text += '\t';  // Tab
+      //this->typed_text += '\t';  // Tab
     } else if (it.first == 0x08) {
       // Caps
       mode = (mode == 1) ? 0 : 1;

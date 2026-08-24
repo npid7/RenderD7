@@ -1,8 +1,11 @@
-#include <renderd7/Hid.hpp>  // Integate HidApi
+#include <regex>
+#include <renderd7/DrawV2.hpp>  // Switch to Draw2
+#include <renderd7/Hid.hpp>     // Integate HidApi
 #include <renderd7/Message.hpp>
 #include <renderd7/Overlays.hpp>
-#include <renderd7/ThemeEditor.hpp>
 #include <renderd7/UI7.hpp>
+#include <renderd7/log.hpp>
+#include <renderd7/music/Music.hpp>
 #include <renderd7/renderd7.hpp>
 #include <renderd7/renderd7_logo.hpp>
 
@@ -10,17 +13,13 @@
 #include <renderd7/external/json.hpp>
 #include <renderd7/internal_db.hpp>
 
-// C++ includes
-#include <filesystem>
-#include <random>
-
-RenderD7::LoggerBase::Ref rd7i_glogger;
-extern RenderD7::LoggerBase::Ref rd7i_logger;
+#ifdef RENDERD7_MUSICDEC
+extern void rd7i_player_init();
+#endif
 
 static void RD7i_ExitHook() {
   C2D_TextBufDelete(rd7i_text_buffer);
   C2D_TextBufDelete(rd7i_d2_dimbuf);
-  romfsExit();
 }
 
 std::vector<std::string> string_to_lines(std::string input_str) {
@@ -36,21 +35,13 @@ std::vector<std::string> string_to_lines(std::string input_str) {
 void Npifade() {
   if (rd7i_fadein) {
     if (rd7i_fadealpha < 255) {
-      if ((int)rd7i_fadealpha + 3 > 255) {
-        rd7i_fadealpha = 255;
-      } else {
-        rd7i_fadealpha += 3;
-      }
+      rd7i_fadealpha += 3;
     } else {
       rd7i_fadein = false;
     }
   } else if (rd7i_fadeout) {
     if (rd7i_fadealpha > 0) {
-      if ((int)rd7i_fadealpha - 3 < 0) {
-        rd7i_fadealpha = 0;
-      } else {
-        rd7i_fadealpha -= 3;
-      }
+      rd7i_fadealpha -= 3;
     } else {
       rd7i_fadeout = false;
     }
@@ -60,32 +51,27 @@ void Npifade() {
     if (rd7i_fade_scene_wait) {
       RenderD7::Scene::scenes.push(std::move(rd7i_fade_scene));
       rd7i_fade_scene_wait = false;
-      RenderD7::FadeIn();
     }
     // No fade
   }
-  /*if (rd7i_fadein || rd7i_fadeout) {
-    RenderD7::R2::OnScreen(RenderD7::R2Screen_Top);
-    RenderD7::R2::AddRect(R7Vec2(0, 0), R7Vec2(400, 240),
-                            ((rd7i_fadealpha << 24) | 0x00000000));
-    RenderD7::R2::OnScreen(RenderD7::R2Screen_Bottom);
-    RenderD7::R2::AddRect(R7Vec2(0, 0), R7Vec2(320, 240),
-                            ((rd7i_fadealpha << 24) | 0x00000000));
-  }*/
+  RenderD7::OnScreen(Top);
+  RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 240),
+                       ((rd7i_fadealpha << 24) | 0x00000000));
+  RenderD7::OnScreen(Bottom);
+  RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(320, 240),
+                       ((rd7i_fadealpha << 24) | 0x00000000));
 }
 
 void PushSplash() {
-  RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(PushSplash));
   C2D_SpriteSheet sheet;
   sheet = C2D_SpriteSheetLoadFromMem((void *)renderd7_logo, renderd7_logo_size);
   // Display for 2 Sec
   for (int x = 0; x < 120; x++) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-    C2D_TargetClear(rd7_top, 0xff000000);
-    C2D_TargetClear(rd7_bottom, 0xff000000);
+    C2D_TargetClear(Top, 0xff000000);
+    C2D_TargetClear(Bottom, 0xff000000);
     RenderD7::ClearTextBufs();
-    C2D_SceneBegin(rd7_top);
-    RenderD7::R2::OnScreen(R2Screen_Top);
+    RenderD7::OnScreen(Top);
     C2D_DrawImageAt(C2D_SpriteSheetGetImage(sheet, 0), 400 / 2 - 300 / 2,
                     240 / 2 - 100 / 2, 0.5);
     C3D_FrameEnd(0);
@@ -93,7 +79,340 @@ void PushSplash() {
   C2D_SpriteSheetFree(sheet);
 }
 
-void rd7i_init_input() {
+float RenderD7::GetDeltaTime() { return (float)rd7i_dtm; }
+
+bool RenderD7::DrawImageFromSheet(RenderD7::Sheet *sheet, size_t index, float x,
+                                  float y, float scaleX, float scaleY) {
+  if (sheet->spritesheet != nullptr) {
+    if (C2D_SpriteSheetCount(sheet->spritesheet) >= index) {
+      return C2D_DrawImageAt(C2D_SpriteSheetGetImage(sheet->spritesheet, index),
+                             x, y, 0.5f, nullptr, scaleX, scaleY);
+    }
+  }
+  return false;
+}
+void RenderD7::Init::NdspFirm() {
+  if (access("sdmc:/3ds/dspfirm.cdc", F_OK) != -1) {
+    rd7_security->SafeInit(ndspInit, ndspExit);
+    rd7i_is_ndsp = true;
+  } else {
+    RenderD7::PushMessage(RenderD7::Message(
+        "RenderD7", "dspfirm.cdc not found!\nUnable to play sounds!"));
+  }
+}
+
+void RenderD7::Scene::doDraw() {
+  if (!RenderD7::Scene::scenes.empty()) RenderD7::Scene::scenes.top()->Draw();
+}
+
+void RenderD7::Scene::doLogic() {
+  if (!RenderD7::Scene::scenes.empty()) RenderD7::Scene::scenes.top()->Logic();
+}
+
+void RenderD7::Scene::Load(std::unique_ptr<Scene> scene, bool fade) {
+  if (fade) {
+    rd7i_fade_scene = std::move(scene);
+    rd7i_fade_scene_wait = true;
+  } else
+    Scene::scenes.push(std::move(scene));
+}
+
+void RenderD7::Scene::Back() {
+  if (RenderD7::Scene::scenes.size() > 0) RenderD7::Scene::scenes.pop();
+}
+
+void frameloop() {
+  rd7i_frames++;
+  rd7i_delta_time = osGetTime() - rd7i_last_time;
+  if (rd7i_delta_time >= 1000) {
+    rd7i_framerate = rd7i_frames / (rd7i_delta_time / 1000.0f) + 1;
+    rd7i_frames = 0;
+    rd7i_last_time = osGetTime();
+  }
+}
+float getframerate() { return rd7i_framerate; }
+
+std::string RenderD7::GetFramerate() {
+  return (std::to_string((int)rd7i_framerate).substr(0, 2));
+}
+
+bool RenderD7::MainLoop() {
+  RenderD7::Ftrace::Beg("rd7-core", f2s(RenderD7::MainLoop));
+  if (!aptMainLoop()) return false;
+  // Deltatime
+  uint64_t currentTime = svcGetSystemTick();
+  rd7i_dtm = ((float)(currentTime / (float)TICKS_PER_MSEC) -
+              (float)(rd7i_last_tm / (float)TICKS_PER_MSEC)) /
+             1000.f;
+  rd7i_time += rd7i_dtm;
+  rd7i_last_tm = currentTime;
+
+  hidScanInput();
+  d7_hDown = hidKeysDown();
+  d7_hUp = hidKeysUp();
+  d7_hHeld = hidKeysHeld();
+  // Inofficial
+  d7_hRepeat = hidKeysDownRepeat();
+  hidTouchRead(&d7_touch);
+  Hid::Update();
+  UI7::Update();
+  rd7i_hid_touch_pos = R7Vec2(d7_touch.px, d7_touch.py);
+
+  RenderD7::ClearTextBufs();
+  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+
+  C2D_TargetClear(Top, C2D_Color32(0, 0, 0, 0));
+  C2D_TargetClear(Bottom, C2D_Color32(0, 0, 0, 0));
+  RenderD7::Ftrace::Beg("rd7-core", "frame");
+  frameloop();
+  if (rd7_enable_scene_system) {
+    RenderD7::Ftrace::Beg("rd7sm", f2s(RenderD7::Scene::doDraw));
+    RenderD7::Scene::doDraw();
+    RenderD7::Ftrace::End("rd7sm", f2s(RenderD7::Scene::doDraw));
+    RenderD7::Ftrace::Beg("rd7sm", f2s(RenderD7::Scene::doLogic));
+    RenderD7::Scene::doLogic();
+    RenderD7::Ftrace::End("rd7sm", f2s(RenderD7::Scene::doLogic));
+  }
+
+  // Disably Overlays For one Frame
+  RenderD7::Ftrace::End("rd7-core", f2s(RenderD7::MainLoop));
+  return rd7i_running;
+}
+
+void RenderD7::ClearTextBufs(void) { C2D_TextBufClear(rd7i_text_buffer); }
+
+void RenderD7::Init::Graphics() {
+  C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+  C2D_Init((size_t)rd7_max_objects);
+  C2D_Prepare();
+  Top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+  TopRight = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
+  Bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+  rd7i_text_buffer = C2D_TextBufNew(4096);
+  rd7i_d2_dimbuf = C2D_TextBufNew(4096);
+  rd7i_base_font = C2D_FontLoadSystem(CFG_REGION_USA);
+}
+
+Result RenderD7::Init::Main(std::string app_name) {
+  /// The only func that can be executed before Security
+  RenderD7::Ftrace::Beg("rd7-core", f2s(RenderD7::Init::Main));
+  RenderD7::Init::Security();
+  rd7_security->SafeInit(gfxInitDefault, gfxExit);
+  // Speedup
+  osSetSpeedupEnable(true);
+  // consoleInit(GFX_TOP, NULL);
+  rd7_security->SafeInit(cfguInit, cfguExit);
+  CFGU_SecureInfoGetRegion(&rd7i_system_region);
+  CFGU_GetSystemModel(&rd7i_console_model);
+
+  rd7_security->SafeInit(aptInit, aptExit);
+  rd7_security->SafeInit(romfsInit, romfsExit);
+
+#ifdef RENDERD7_MUSICDEC
+  rd7i_player_init();
+  rd7_security->SafeExit(RenderD7::MusicPlayer::Stop);
+#endif
+
+  C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+  rd7_security->SafeExit(C3D_Fini);
+  C2D_Init((size_t)rd7_max_objects);
+  rd7_security->SafeExit(C2D_Fini);
+  rd7_security->SafeExit(RD7i_ExitHook);
+  C2D_Prepare();
+  Top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+  TopRight = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
+  Bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+  rd7i_text_buffer = C2D_TextBufNew(4096);
+  rd7i_d2_dimbuf = C2D_TextBufNew(4096);
+  rd7i_base_font = C2D_FontLoadSystem(CFG_REGION_USA);
+
+  rd7i_graphics_on = true;
+
+  rd7i_last_tm = svcGetSystemTick();
+  RenderD7::Ftrace::Beg("rd7-core", "do_splash");
+  if (rd7_do_splash) PushSplash();
+  RenderD7::Ftrace::End("rd7-core", "do_splash");
+
+  rd7i_app_name = app_name;
+  rd7i_config_path = "sdmc:/RenderD7/Apps/";
+  rd7i_config_path += rd7i_app_name;
+  std::filesystem::create_directories(rd7i_config_path.c_str());
+  bool renew = false;
+
+  if (FS::FileExist(rd7i_config_path + "/config.rc7")) {
+    std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
+    cfg_ldr >> rd7i_config;
+    cfg_ldr.close();
+    std::string version = rd7i_config["info"]["version"].get<std::string>();
+    if (version != CFGVER) renew = true;
+  }
+
+  if (!FS::FileExist(rd7i_config_path + "/config.rc7") || renew) {
+    if (renew) {
+      std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
+      cfg_ldr >> rd7i_config;
+      cfg_ldr.close();
+    }
+    rd7i_config.clear();
+    rd7i_config["info"]["version"] = CFGVER;
+    rd7i_config["info"]["renderd7ver"] = RENDERD7VSTRING;
+    rd7i_config["settings"]["doscreentimeout"] = 0;
+    rd7i_config["settings"]["forcetimeoutLB"] = true;
+    rd7i_config["settings"]["renderer"] = "c3d_c2d";
+    rd7i_config["metrik-settings"]["enableoverlay"] = false;
+    rd7i_config["metrik-settings"]["Screen"] = true;
+    rd7i_config["metrik-settings"]["txtColor"] = "#ffffffff";
+    rd7i_config["metrik-settings"]["Color"] = "#aa000000";
+    rd7i_config["metrik-settings"]["txtSize"] = 0.7f;
+    std::fstream cfg_wrt(rd7i_config_path + "/config.rc7", std::ios::out);
+    cfg_wrt << rd7i_config.dump(4);
+    cfg_wrt.close();
+  }
+  std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
+  cfg_ldr >> rd7i_config;
+  cfg_ldr.close();
+
+  rd7i_metrikd = rd7i_config["metrik-settings"]["enableoverlay"].get<bool>();
+  rd7i_mt_txtSize = rd7i_config["metrik-settings"]["txtSize"].get<float>();
+  rd7i_mt_screen = rd7i_config["metrik-settings"]["Screen"].get<bool>();
+  // Check if citra
+  s64 citracheck = 0;
+  svcGetSystemInfo(&citracheck, 0x20000, 0);
+  rd7i_is_citra = citracheck ? true : false;
+
+  if (rd7i_metrikd)
+    RenderD7::AddOvl(std::make_unique<Ovl_Metrik>(
+        &rd7i_metrikd, &rd7i_mt_screen, &rd7i_mt_color, &rd7i_mt_txtcolor,
+        &rd7i_mt_txtSize));
+
+  RenderD7::Hid::RegTouchCoords(rd7i_hid_touch_pos);
+  // Why do i need to do this??????
+  // I mean u32 is actually unsigned int
+  RenderD7::Hid::RegKeyDown(d7_hDown);
+  RenderD7::Hid::RegKeyHeld(d7_hHeld);
+  RenderD7::Hid::RegKeyUp(d7_hUp);
+  RenderD7::Hid::RegKeyRepeat(d7_hRepeat);
+  RenderD7::Hid::RegKeyEvent("touch", KEY_TOUCH);
+  // Default Buttons
+  RenderD7::Hid::RegKeyEvent("confirm", KEY_A);
+  RenderD7::Hid::RegKeyEvent("cancel", KEY_B);
+  RenderD7::Hid::RegKeyEvent("spec2", KEY_X);
+  RenderD7::Hid::RegKeyEvent("spec3", KEY_Y);
+  RenderD7::Hid::RegKeyEvent("options", KEY_SELECT);
+  RenderD7::Hid::RegKeyEvent("spec1", KEY_START);
+  // Dpad only
+  RenderD7::Hid::RegKeyEvent("dright", KEY_DRIGHT);
+  RenderD7::Hid::RegKeyEvent("dleft", KEY_DLEFT);
+  RenderD7::Hid::RegKeyEvent("dup", KEY_DUP);
+  RenderD7::Hid::RegKeyEvent("ddown", KEY_DDOWN);
+  // D + Cpad
+  RenderD7::Hid::RegKeyEvent("right", KEY_RIGHT);
+  RenderD7::Hid::RegKeyEvent("left", KEY_LEFT);
+  RenderD7::Hid::RegKeyEvent("up", KEY_UP);
+  RenderD7::Hid::RegKeyEvent("down", KEY_DOWN);
+  // Back keys
+  RenderD7::Hid::RegKeyEvent("rt1", KEY_R);
+  RenderD7::Hid::RegKeyEvent("lt1", KEY_L);
+  RenderD7::Hid::RegKeyEvent("rt2", KEY_ZL);
+  RenderD7::Hid::RegKeyEvent("lt2", KEY_ZR);
+  // Key by their names
+  RenderD7::Hid::RegKeyEvent("A", KEY_A);
+  RenderD7::Hid::RegKeyEvent("B", KEY_B);
+  RenderD7::Hid::RegKeyEvent("X", KEY_X);
+  RenderD7::Hid::RegKeyEvent("Y", KEY_Y);
+  RenderD7::Hid::RegKeyEvent("L", KEY_L);
+  RenderD7::Hid::RegKeyEvent("R", KEY_R);
+  RenderD7::Hid::RegKeyEvent("ZR", KEY_ZR);
+  RenderD7::Hid::RegKeyEvent("ZL", KEY_ZL);
+  RenderD7::Hid::RegKeyEvent("START", KEY_START);
+  RenderD7::Hid::RegKeyEvent("SELECT", KEY_SELECT);
+  RenderD7::Hid::RegKeyEvent("DUP", KEY_DUP);
+  RenderD7::Hid::RegKeyEvent("DDOWN", KEY_DDOWN);
+  RenderD7::Hid::RegKeyEvent("DLEFT", KEY_DRIGHT);
+  RenderD7::Hid::RegKeyEvent("DRIGHT", KEY_DLEFT);
+  UI7::Init();
+  rd7_security->SafeExit(UI7::Deinit);
+  RenderD7::Ftrace::End("rd7-core", f2s(RenderD7::Init::Main));
+  return 0;
+}
+
+Result RenderD7::Init::Minimal(std::string app_name) {
+  rd7i_app_name = app_name;
+  RenderD7::Init::Security();
+  rd7_security->SafeInit(gfxInitDefault, gfxExit);
+  rd7_security->SafeInit(romfsInit, romfsExit);
+
+#ifdef RENDERD7_MUSICDEC
+  rd7i_player_init();
+  rd7_security->SafeExit(RenderD7::MusicPlayer::Stop);
+#endif
+
+  osSetSpeedupEnable(true);
+  C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+  rd7_security->SafeExit(C3D_Fini);
+  C2D_Init((size_t)rd7_max_objects);
+  rd7_security->SafeExit(C2D_Fini);
+  rd7_security->SafeExit(RD7i_ExitHook);
+  C2D_Prepare();
+  Top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+  TopRight = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
+  Bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+  rd7i_text_buffer = C2D_TextBufNew(4096);
+  rd7i_d2_dimbuf = C2D_TextBufNew(4096);
+  rd7i_base_font = C2D_FontLoadSystem(CFG_REGION_USA);
+  rd7i_graphics_on = true;
+  if (rd7_do_splash) PushSplash();
+
+  // Check if citra
+  s64 citracheck = 0;
+  svcGetSystemInfo(&citracheck, 0x20000, 0);
+  rd7i_is_citra = citracheck ? true : false;
+
+  rd7i_config_path = "sdmc:/RenderD7/Apps/";
+  rd7i_config_path += rd7i_app_name;
+  std::filesystem::create_directories(rd7i_config_path.c_str());
+  bool renew = false;
+
+  if (FS::FileExist(rd7i_config_path + "/config.rc7")) {
+    std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
+    cfg_ldr >> rd7i_config;
+    cfg_ldr.close();
+    std::string version = rd7i_config["info"]["version"].get<std::string>();
+    if (version != CFGVER) renew = true;
+  }
+
+  if (!FS::FileExist(rd7i_config_path + "/config.rc7") || renew) {
+    std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
+    cfg_ldr >> rd7i_config;
+    cfg_ldr.close();
+    rd7i_config.clear();
+    rd7i_config["info"]["version"] = CFGVER;
+    rd7i_config["info"]["renderd7ver"] = RENDERD7VSTRING;
+    rd7i_config["settings"]["doscreentimeout"] = 0;
+    rd7i_config["settings"]["forcetimeoutLB"] = true;
+    rd7i_config["settings"]["renderer"] = "c3d_c2d";
+    rd7i_config["metrik-settings"]["enableoverlay"] = false;
+    rd7i_config["metrik-settings"]["Screen"] = true;
+    rd7i_config["metrik-settings"]["txtColor"] = "#ffffffff";
+    rd7i_config["metrik-settings"]["Color"] = "#aa000000";
+    rd7i_config["metrik-settings"]["txtSize"] = 0.7f;
+    std::fstream cfg_wrt(rd7i_config_path + "/config.rc7", std::ios::out);
+    cfg_wrt << rd7i_config.dump(4);
+    cfg_wrt.close();
+  }
+  std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
+  cfg_ldr >> rd7i_config;
+  cfg_ldr.close();
+
+  rd7i_metrikd = rd7i_config["metrik-settings"]["enableoverlay"].get<bool>();
+  rd7i_mt_txtSize = rd7i_config["metrik-settings"]["txtSize"].get<float>();
+  rd7i_mt_screen = rd7i_config["metrik-settings"]["Screen"].get<bool>();
+
+  if (rd7i_metrikd)
+    RenderD7::AddOvl(std::make_unique<Ovl_Metrik>(
+        &rd7i_metrikd, &rd7i_mt_screen, &rd7i_mt_color, &rd7i_mt_txtcolor,
+        &rd7i_mt_txtSize));
+
   RenderD7::Hid::RegTouchCoords(rd7i_hid_touch_pos);
   RenderD7::Hid::RegKeyDown(d7_hDown);
   RenderD7::Hid::RegKeyHeld(d7_hHeld);
@@ -137,324 +456,8 @@ void rd7i_init_input() {
   RenderD7::Hid::RegKeyEvent("DDOWN", KEY_DDOWN);
   RenderD7::Hid::RegKeyEvent("DLEFT", KEY_DRIGHT);
   RenderD7::Hid::RegKeyEvent("DRIGHT", KEY_DLEFT);
-}
-
-void rd7i_init_config() {
-  rd7i_config_path = "sdmc:/RenderD7/Apps/";
-  rd7i_config_path += rd7i_app_name;
-  std::filesystem::create_directories(rd7i_config_path.c_str());
-  std::filesystem::create_directories("sdmc:/RenderD7/Reports");
-  bool renew = false;
-
-  if (RenderD7::FS::FileExist(rd7i_config_path + "/config.rc7")) {
-    std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
-    cfg_ldr >> rd7i_config;
-    cfg_ldr.close();
-    std::string version = rd7i_config["info"]["version"].get<std::string>();
-    if (version != CFGVER) renew = true;
-  }
-
-  if (!RenderD7::FS::FileExist(rd7i_config_path + "/config.rc7") || renew) {
-    if (renew) {
-      std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
-      cfg_ldr >> rd7i_config;
-      cfg_ldr.close();
-    }
-    rd7i_config.clear();
-    rd7i_config["info"]["version"] = CFGVER;
-    rd7i_config["info"]["renderd7ver"] = RENDERD7VSTRING;
-    rd7i_config["metrik-settings"]["show"] = false;
-    rd7i_config["metrik-settings"]["Screen"] = true;
-    rd7i_config["metrik-settings"]["Text"] = "#ffffffff";
-    rd7i_config["metrik-settings"]["Bg"] = "#aa000000";
-    rd7i_config["metrik-settings"]["Size"] = 0.7f;
-    rd7i_config["internal_logger"]["nowritetxt"] = true;
-    std::fstream cfg_wrt(rd7i_config_path + "/config.rc7", std::ios::out);
-    cfg_wrt << rd7i_config.dump(4);
-    cfg_wrt.close();
-  }
-  std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
-  cfg_ldr >> rd7i_config;
-  cfg_ldr.close();
-
-  rd7i_metrikd = rd7i_config["metrik-settings"]["show"].get<bool>();
-  rd7i_mt_txtSize = rd7i_config["metrik-settings"]["Size"].get<float>();
-  rd7i_mt_screen = rd7i_config["metrik-settings"]["Screen"].get<bool>();
-  rd7i_lggrf = rd7i_config["internal_logger"]["nowritetxt"].get<bool>();
-
-  if (rd7i_metrikd)
-    RenderD7::AddOvl(std::make_unique<RenderD7::Ovl_Metrik>(
-        &rd7i_metrikd, &rd7i_mt_screen, &rd7i_mt_color, &rd7i_mt_txtcolor,
-        &rd7i_mt_txtSize));
-}
-
-void rd7i_init_theme() {
-  if (rd7i_config_path == "") {
-    rd7i_config_path = "sdmc:/RenderD7/Apps/";
-    rd7i_config_path += rd7i_app_name;
-  }
-  std::string path = rd7i_config_path + "/themes";
-  std::filesystem::create_directories(path.c_str());
-  bool renew = false;
-
-  if (RenderD7::FS::FileExist(path + "/renderd7.theme")) {
-    std::fstream cfg_ldr(path + "/renderd7.theme", std::ios::in);
-    nlohmann::json js;
-    cfg_ldr >> js;
-    cfg_ldr.close();
-    std::string version = js["version"].get<std::string>();
-    if (version != THEMEVER) renew = true;
-  }
-
-  if (!RenderD7::FS::FileExist(path + "/renderd7.theme") || renew) {
-    rd7i_amdt = true;
-    RenderD7::ThemeActive()->Save(path + "/renderd7.theme");
-    rd7i_amdt = false;
-  }
-}
-
-RenderD7::LoggerBase::Ref RenderD7::Logger() {
-  if (!rd7i_glogger) {
-    RenderD7::Error("Logger Was Called before being Init!");
-    // return schould not be reached then
-  }
-  return rd7i_glogger;
-}
-
-float RenderD7::GetDeltaTime() { return (float)rd7i_dtm; }
-
-void RenderD7::Init::NdspFirm() {
-  if (access("sdmc:/3ds/dspfirm.cdc", F_OK) != -1) {
-    ndspInit();
-    atexit(ndspExit);
-    rd7i_is_ndsp = true;
-  } else {
-    RenderD7::PushMessage(RenderD7::Message(
-        "RenderD7", "dspfirm.cdc not found!\nUnable to play sounds!"));
-  }
-}
-
-void RenderD7::Scene::doDraw() {
-  Ftrace::ScopedTrace st("rd7-core", f2s(Scene::doDraw));
-  if (!RenderD7::Scene::scenes.empty()) RenderD7::Scene::scenes.top()->Draw();
-}
-
-void RenderD7::Scene::doLogic() {
-  Ftrace::ScopedTrace st("rd7-core", f2s(Scene::doLogic));
-  if (!RenderD7::Scene::scenes.empty()) RenderD7::Scene::scenes.top()->Logic();
-}
-
-void RenderD7::Scene::Load(std::unique_ptr<Scene> scene, bool fade) {
-  if (fade) {
-    RenderD7::FadeOut();
-    rd7i_fade_scene = std::move(scene);
-    rd7i_fade_scene_wait = true;
-  } else
-    Scene::scenes.push(std::move(scene));
-}
-
-void RenderD7::Scene::Back() {
-  if (RenderD7::Scene::scenes.size() > 0) RenderD7::Scene::scenes.pop();
-}
-
-void frameloop() {
-  rd7i_frames++;
-  rd7i_delta_time = osGetTime() - rd7i_last_time;
-  if (rd7i_delta_time >= 1000) {
-    rd7i_framerate = rd7i_frames / (rd7i_delta_time / 1000.0f) + 1;
-    rd7i_frames = 0;
-    rd7i_last_time = osGetTime();
-  }
-}
-float getframerate() { return rd7i_framerate; }
-
-std::string RenderD7::GetFramerate() {
-  return (std::to_string((int)rd7i_framerate).substr(0, 2));
-}
-
-bool RenderD7::MainLoop() {
-  RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(MainLoop));
-  if (!aptMainLoop()) return false;
-  // Deltatime
-  uint64_t currentTime = svcGetSystemTick();
-  rd7i_dtm = ((float)(currentTime / (float)TICKS_PER_MSEC) -
-              (float)(rd7i_last_tm / (float)TICKS_PER_MSEC)) /
-             1000.f;
-  rd7i_time += rd7i_dtm;
-  rd7i_last_tm = currentTime;
-
-  hidScanInput();
-  d7_hDown = hidKeysDown();
-  d7_hUp = hidKeysUp();
-  d7_hHeld = hidKeysHeld();
-  // Inofficial
-  d7_hRepeat = hidKeysDownRepeat();
-  hidTouchRead(&d7_touch);
-  Hid::Update();
-  rd7i_hid_touch_pos = R7Vec2(d7_touch.px, d7_touch.py);
-
-  RenderD7::ClearTextBufs();
-  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-
-  C2D_TargetClear(rd7_top, C2D_Color32(0, 0, 0, 0));
-  C2D_TargetClear(rd7_bottom, C2D_Color32(0, 0, 0, 0));
-  frameloop();
-  if (rd7i_enable_scene_system) {
-    RenderD7::Scene::doDraw();
-    RenderD7::Scene::doLogic();
-  }
-  return rd7i_running;
-}
-
-void RenderD7::ClearTextBufs(void) { C2D_TextBufClear(rd7i_text_buffer); }
-
-void RenderD7::Init::Graphics() {
-  C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-  C2D_Init((size_t)rd7_max_objects);
-  C2D_Prepare();
-  rd7_top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-  rd7_top_right = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
-  rd7_bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
-  rd7i_text_buffer = C2D_TextBufNew(4096);
-  rd7i_d2_dimbuf = C2D_TextBufNew(4096);
-  rd7i_base_font = C2D_FontLoadSystem(CFG_REGION_USA);
-  R2::Init();
-}
-
-Result RenderD7::Init::Main(std::string app_name) {
-  RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(Init::Main));
-  rd7i_app_name = app_name;
-  rd7i_logger = LoggerBase::New();
-  rd7i_glogger = LoggerBase::New();
-
-  rd7i_do_splash = (rd7_flags & RD7Flags_ShowSplash);
-  rd7i_enable_scene_system = (rd7_flags & RD7Flags_SceneSystem);
-  rd7i_enable_memtrack = (rd7_flags & RD7Flags_MemTrack);
-
-  gfxInitDefault();
-  atexit(gfxExit);
-  // Speedup
-  osSetSpeedupEnable(true);
-  // consoleInit(GFX_TOP, NULL);
-  cfguInit();
-  atexit(cfguExit);
-  CFGU_SecureInfoGetRegion(&rd7i_system_region);
-  CFGU_GetSystemModel(&rd7i_console_model);
-
-  aptInit();
-  atexit(aptExit);
-  romfsInit();
-
-  rd7i_init_config();
-  _rd7i_logger()->Init("renderd7", rd7i_lggrf);
-
-  rd7i_active_theme = Theme::New();
-  rd7i_active_theme->Default();
-
-  auto ret = rd7i_soc_init();
-  if (ret) {
-    rd7i_logger->Write("Failed to Init Soc!");
-    RenderD7::PushMessage("RenderD7", "Failed to\nInit Soc!");
-  } else {
-    atexit(rd7i_soc_deinit);
-  }
-
-  if (R_SUCCEEDED(amInit())) {
-    atexit(amExit);
-    rd7i_is_am_init = true;
-  }
-
-  Hardware::Initialisize();
-
-  C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-  atexit(C3D_Fini);
-  C2D_Init((size_t)rd7_max_objects);
-  atexit(C2D_Fini);
-  atexit(RD7i_ExitHook);
-  C2D_Prepare();
-  rd7_top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-  rd7_top_right = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
-  rd7_bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
-  rd7i_text_buffer = C2D_TextBufNew(4096);
-  rd7i_d2_dimbuf = C2D_TextBufNew(4096);
-  rd7i_base_font = C2D_FontLoadSystem(CFG_REGION_USA);
-  R2::Init();
-
-  rd7i_graphics_on = true;
-  rd7i_last_tm = svcGetSystemTick();
-  if (rd7i_do_splash) PushSplash();
-
-  rd7i_init_input();
-  rd7i_init_theme();
   UI7::Init();
-  atexit(UI7::Deinit);
-  rd7i_running = true;
-  return 0;
-}
-
-Result RenderD7::Init::Minimal(std::string app_name) {
-  RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(Init::Minimal));
-  rd7i_app_name = app_name;
-  rd7i_logger = LoggerBase::New();
-  rd7i_glogger = LoggerBase::New();
-
-  rd7i_do_splash = (rd7_flags & RD7Flags_ShowSplash);
-  rd7i_enable_scene_system = (rd7_flags & RD7Flags_SceneSystem);
-  rd7i_enable_memtrack = (rd7_flags & RD7Flags_MemTrack);
-
-  gfxInitDefault();
-  atexit(gfxExit);
-  romfsInit();
-
-  rd7i_init_config();
-  _rd7i_logger()->Init("renderd7", rd7i_lggrf);
-
-  rd7i_active_theme = Theme::New();
-  rd7i_active_theme->Default();
-
-  auto ret = rd7i_soc_init();
-  if (ret) {
-    rd7i_logger->Write("Failed to Init Soc!");
-    RenderD7::PushMessage("RenderD7", "Failed to\nInit Soc!");
-  } else {
-    atexit(rd7i_soc_deinit);
-  }
-
-  if (R_SUCCEEDED(amInit())) {
-    atexit(amExit);
-    rd7i_is_am_init = true;
-  }
-
-  Hardware::Initialisize();
-
-  osSetSpeedupEnable(true);
-  C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-  atexit(C3D_Fini);
-  C2D_Init((size_t)rd7_max_objects);
-  atexit(C2D_Fini);
-  atexit(RD7i_ExitHook);
-  C2D_Prepare();
-  rd7_top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-  rd7_top_right = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
-  rd7_bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
-  rd7i_text_buffer = C2D_TextBufNew(4096);
-  rd7i_d2_dimbuf = C2D_TextBufNew(4096);
-  rd7i_base_font = C2D_FontLoadSystem(CFG_REGION_USA);
-  R2::Init();
-
-  rd7i_graphics_on = true;
-  if (rd7i_do_splash) PushSplash();
-
-  // Check if citra
-  s64 citracheck = 0;
-  svcGetSystemInfo(&citracheck, 0x20000, 0);
-  rd7i_is_citra = citracheck ? true : false;
-
-  rd7i_init_input();
-  rd7i_init_theme();
-  UI7::Init();
-  atexit(UI7::Deinit);
-  rd7i_running = true;
+  rd7_security->SafeExit(UI7::Deinit);
   return 0;
 }
 
@@ -466,12 +469,11 @@ Result RenderD7::Init::Reload() {
   C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
   C2D_Init((size_t)rd7_max_objects);
   C2D_Prepare();
-  rd7_top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-  rd7_top_right = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
-  rd7_bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+  Top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+  TopRight = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
+  Bottom = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
   rd7i_text_buffer = C2D_TextBufNew(4096);
   rd7i_base_font = C2D_FontLoadSystem(CFG_REGION_USA);
-  R2::Init();
   rd7i_graphics_on = true;
 
   return 0;
@@ -492,8 +494,7 @@ int RenderD7::GetRandomInt(int b, int e) {
 }
 
 bool RenderD7::FS::FileExist(const std::string &path) {
-  return std::filesystem::exists(path) &&
-         std::filesystem::is_regular_file(path);
+  return std::filesystem::exists(path);
 }
 
 int RenderD7::GetFps() { return (int)rd7i_framerate; }
@@ -501,7 +502,6 @@ int RenderD7::GetFps() { return (int)rd7i_framerate; }
 bool RenderD7::IsNdspInit() { return rd7i_is_ndsp; }
 
 void OvlHandler() {
-  RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(OvlHandler));
   for (size_t i = 0; i < rd7i_overlays.size(); i++) {
     rd7i_overlays[i]->Draw();
     rd7i_overlays[i]->Logic();
@@ -511,27 +511,21 @@ void OvlHandler() {
 }
 
 void RenderD7::FrameEnd() {
-  Ftrace::ScopedTrace st("rd7-core", f2s(FrameEnd));
   C3D_FrameBegin(2);
-  if (!rd7i_enable_scene_system && rd7i_settings) {
+  if (!rd7_enable_scene_system && rd7i_settings) {
     RenderD7::Scene::doDraw();
     RenderD7::Scene::doLogic();
   }
-  UI7::Update();
-  UI7::Debug();
   RenderD7::ProcessMessages();
+  RenderD7::Ftrace::Beg("rd7oh", f2s(OvlHandler));
   OvlHandler();
+  RenderD7::Ftrace::End("rd7oh", f2s(OvlHandler));
   Npifade();
-  R2::Process();
+  RenderD7::Ftrace::End("rd7-core", "frame");
   C3D_FrameEnd(0);
 }
 
 RenderD7::RSettings::RSettings() {
-  // RenderD7 Settings is designed for
-  // System Font
-  R2::DefaultFont();
-  tmp_txt = R2::GetTextSize();
-  R2::DefaultTextSize();
   RenderD7::FadeIn();
   std::fstream cfg_ldr(rd7i_config_path + "/config.rc7", std::ios::in);
   cfg_ldr >> rd7i_config;
@@ -541,7 +535,7 @@ RenderD7::RSettings::RSettings() {
   stateftold = rd7i_ftraced;
 }
 
-RenderD7::RSettings::~RSettings() { R2::SetTextSize(tmp_txt); }
+RenderD7::RSettings::~RSettings() {}
 
 std::vector<std::string> StrHelper(std::string input) {
   std::string ss(input);
@@ -555,22 +549,24 @@ std::vector<std::string> StrHelper(std::string input) {
 
 void RenderD7::RSettings::Draw(void) const {
   if (m_state == RSETTINGS) {
-    RenderD7::R2::OnScreen(R2Screen_Top);
+    RenderD7::OnScreen(Top);
     if (UI7::BeginMenu("RenderD7 -> Settings")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
       UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
-      UI7::Label("Config Version: " + std::string(CFGVER));
-      UI7::Label("App: " + rd7i_app_name);
-      UI7::Label("RenderD7: " + std::string(RENDERD7VSTRING));
-      UI7::Label("Citra: " + std::string(rd7i_is_citra ? "true" : "false"));
+
+      std::string verc = "Config Version: ";
+      verc += CFGVER;
+      UI7::Label(verc);
+      UI7::Label("Metrik Overlay: " + mtovlstate);
+      UI7::Label("Metrik Screen: " + mtscreenstate);
       UI7::Label("Current: " + std::to_string(RenderD7::Memory::GetCurrent()) +
                  "b");
       UI7::Label("Delta: " + std::to_string(RenderD7::GetDeltaTime()));
       UI7::Label("Kbd test: " + kbd_test);
       UI7::EndMenu();
     }
-    RenderD7::R2::OnScreen(R2Screen_Bottom);
+    RenderD7::OnScreen(Bottom);
     if (UI7::BeginMenu("Press \uE001 to go back!")) {
       if (UI7::Button("FTrace")) {
         shared_request[0x00000001] = RFTRACE;
@@ -579,19 +575,8 @@ void RenderD7::RSettings::Draw(void) const {
         shared_request[0x00000001] = RUI7;
       }
       if (UI7::Button("Overlays")) {
-        shared_request[0x00000001] = ROVERLAYS;
+        shared_request[0x00000001] = RMCONFIG;
       }
-      if (UI7::Button("IDB")) {
-        shared_request[0x00000001] = RIDB;
-      }
-      if (UI7::Button("ThemeEditor")) {
-        RenderD7::LoadThemeEditor();
-      }
-      if (UI7::Button("Logs")) {
-        shared_request[0x00000001] = RLOGS;
-      }
-      UI7::SameLine();
-      UI7::Checkbox("No File", rd7i_lggrf);
       if (UI7::Button("Back")) {
         shared_request[0x00000002] = 1U;
       }
@@ -601,73 +586,86 @@ void RenderD7::RSettings::Draw(void) const {
       UI7::EndMenu();
     }
 
-  } else if (m_state == RIDB) {
-    RenderD7::R2::OnScreen(R2Screen_Top);
-    if (UI7::BeginMenu("RenderD7 -> Debugger")) {
-      UI7::SetCursorPos(R7Vec2(395, 2));
-      UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
-      UI7::RestoreCursor();
-      UI7::Label("Server Running: " +
-                 std::string(rd7i_idb_running ? "true" : "false"));
-      UI7::EndMenu();
-    }
-    RenderD7::R2::OnScreen(R2Screen_Bottom);
-    if (UI7::BeginMenu("Press \uE001 to go back!")) {
-      if (UI7::Button("Start Server")) {
-        RenderD7::IDB::Start();
-      }
-      UI7::SameLine();
-      if (UI7::Button("Stop Server")) {
-        RenderD7::IDB::Stop();
-      }
-      UI7::SameLine();
-      if (UI7::Button("Restart Server")) {
-        RenderD7::IDB::Restart();
-      }
+  } else if (m_state == RSERVICES) {
+    RenderD7::OnScreen(Top);
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 240),
+                         RenderD7::StyleColor(RD7Color_Background));
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 20),
+                         RenderD7::StyleColor(RD7Color_Header));
+    RenderD7::TextColorByBg(RD7Color_Header);
+    RenderD7::Draw2::Text(R7Vec2(5, 2), "RenderD7 -> Security");
+    RenderD7::Draw2::Text(R7Vec2(395, 2), RENDERD7VSTRING,
+                          RD7TextFlags_AlignRight);
+    RenderD7::UndoColorEdit(RD7Color_Text);
+    RenderD7::OnScreen(Bottom);
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(320, 240),
+                         RenderD7::StyleColor(RD7Color_Background));
+    RenderD7::Draw2::Text(R7Vec2(5, 2), "Press \uE001 to go back!");
 
-      UI7::EndMenu();
-    }
-
+  } else if (m_state == RINFO) {
+    std::string rd7ver = RENDERD7VSTRING;
+    std::string rd7cfgver = CFGVER;
+    std::string citras = rd7i_is_citra ? "true" : "false";
+    std::string buildtime = V_RD7BTIME;
+    std::string commit = V_RD7CSTRING;
+    RenderD7::OnScreen(Top);
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 240),
+                         RenderD7::StyleColor(RD7Color_Background));
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 20),
+                         RenderD7::StyleColor(RD7Color_Header));
+    RenderD7::TextColorByBg(RD7Color_Header);
+    RenderD7::Draw2::Text(R7Vec2(5, 2), "RenderD7 -> Info");
+    RenderD7::Draw2::Text(R7Vec2(395, 2), RENDERD7VSTRING,
+                          RD7TextFlags_AlignRight);
+    RenderD7::UndoColorEdit(RD7Color_Text);
+    RenderD7::Draw2::Text(R7Vec2(0, 30), "App: " + rd7i_app_name);
+    RenderD7::Draw2::Text(R7Vec2(0, 45), "RenderD7: " + rd7ver);
+    RenderD7::Draw2::Text(R7Vec2(0, 60), "Config-Version: " + rd7cfgver);
+    RenderD7::Draw2::Text(R7Vec2(0, 75), "Citra: " + citras);
+    RenderD7::Draw2::Text(R7Vec2(0, 90), "RenderD7-Build-Time: \n" + buildtime);
+    RenderD7::Draw2::Text(R7Vec2(0, 120), "RenderD7-Commit: " + commit);
+    RenderD7::Draw2::Text(
+        R7Vec2(0, 135),
+        "RenderD7-Overlays: " + std::to_string(rd7i_overlays.size()));
+    RenderD7::OnScreen(Bottom);
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(320, 240),
+                         RenderD7::StyleColor(RD7Color_Background));
+    RenderD7::Draw2::Text(R7Vec2(5, 2), "Press \uE001 to go back!");
   } else if (m_state == RFTRACE) {
-    RenderD7::R2::OnScreen(R2Screen_Top);
-    // Draw Top Screen Into Background DrawList
-    UI7::GetBackgroundList()->AddRectangle(R7Vec2(0, 0), R7Vec2(400, 240),
-                                           RD7Color_Background);
-    UI7::GetBackgroundList()->AddRectangle(R7Vec2(0, 0), R7Vec2(400, 20),
-                                           RD7Color_Header);
-    UI7::GetBackgroundList()->AddText(
-        R7Vec2(5, 2), "RenderD7 -> FTrace",
-        RenderD7::ThemeActive()->AutoText(RD7Color_Header));
-    UI7::GetBackgroundList()->AddText(
-        R7Vec2(395, 2), RENDERD7VSTRING,
-        RenderD7::ThemeActive()->AutoText(RD7Color_Header),
-        RD7TextFlags_AlignRight);
-    UI7::GetBackgroundList()->AddRectangle(
-        R7Vec2(0, 220), R7Vec2(400, 20),
-        RenderD7::ThemeActive()->Get(RD7Color_Header));
-    UI7::GetBackgroundList()->AddText(
+    RenderD7::OnScreen(Top);
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 240),
+                         RenderD7::StyleColor(RD7Color_Background));
+    RenderD7::Draw2::RFS(R7Vec2(0, 0), R7Vec2(400, 20),
+                         RenderD7::StyleColor(RD7Color_Header));
+    RenderD7::TextColorByBg(RD7Color_Header);
+    RenderD7::Draw2::Text(R7Vec2(5, 2), "RenderD7 -> FTrace");
+    RenderD7::Draw2::Text(R7Vec2(395, 2), RENDERD7VSTRING,
+                          RD7TextFlags_AlignRight);
+    RenderD7::UndoColorEdit(RD7Color_Text);
+    RenderD7::Draw2::RFS(R7Vec2(0, 220), R7Vec2(400, 20),
+                         RenderD7::StyleColor(RD7Color_Header));
+    RenderD7::TextColorByBg(RD7Color_Header);
+    RenderD7::Draw2::Text(
         R7Vec2(5, 222),
         "Traces: " + std::to_string(ftrace_index + 1) + "/" +
-            std::to_string(RenderD7::Ftrace::rd7_traces.size()),
-        RenderD7::ThemeActive()->AutoText(RD7Color_Header));
-    UI7::GetBackgroundList()->AddRectangle(R7Vec2(0, 20), R7Vec2(400, 20),
-                                           RD7Color_TextDisabled);
-    UI7::GetBackgroundList()->AddText(
-        R7Vec2(5, 22),
-        "Function:", RenderD7::ThemeActive()->AutoText(RD7Color_TextDisabled));
-    UI7::GetBackgroundList()->AddText(
-        R7Vec2(395, 22),
-        "Time (ms):", RenderD7::ThemeActive()->AutoText(RD7Color_TextDisabled),
-        RD7TextFlags_AlignRight);
+            std::to_string(RenderD7::Ftrace::rd7_traces.size()));
+    RenderD7::UndoColorEdit(RD7Color_Text);
+    RenderD7::Draw2::RFS(R7Vec2(0, 20), R7Vec2(400, 20),
+                         RenderD7::StyleColor(RD7Color_TextDisabled));
+    RenderD7::TextColorByBg(RD7Color_TextDisabled);
+    RenderD7::Draw2::Text(R7Vec2(5, 22), "Function:");
+    RenderD7::Draw2::Text(R7Vec2(395, 22),
+                          "Time (ms):", RD7TextFlags_AlignRight);
+    RenderD7::UndoColorEdit(RD7Color_Text);
 
     // List Bg
     for (int i = 0; i < 12; i++) {
       if ((i % 2 == 0))
-        UI7::GetBackgroundList()->AddRectangle(R7Vec2(0, 40 + (i) * 15),
-                                               R7Vec2(400, 15), RD7Color_List0);
+        RenderD7::Draw2::RFS(R7Vec2(0, 40 + (i) * 15), R7Vec2(400, 15),
+                             RenderD7::StyleColor(RD7Color_List0));
       else
-        UI7::GetBackgroundList()->AddRectangle(R7Vec2(0, 40 + (i) * 15),
-                                               R7Vec2(400, 15), RD7Color_List1);
+        RenderD7::Draw2::RFS(R7Vec2(0, 40 + (i) * 15), R7Vec2(400, 15),
+                             RenderD7::StyleColor(RD7Color_List1));
     }
 
     RenderD7::Ftrace::Beg("rd7ft", "display_traces");
@@ -681,27 +679,34 @@ void RenderD7::RSettings::Draw(void) const {
            ix < start_index + 10 && it != RenderD7::Ftrace::rd7_traces.end()) {
       if (ix == ftrace_index) {
         _fkey__ = it->first;
-        UI7::GetBackgroundList()->AddRectangle(
-            R7Vec2(0, 40 + (ix - start_index) * 15), R7Vec2(400, 15),
-            RD7Color_Selector);
+        RenderD7::Draw2::RFS(R7Vec2(0, 40 + (ix - start_index) * 15),
+                             R7Vec2(400, 15),
+                             RenderD7::StyleColor(RD7Color_Selector));
+        RenderD7::TextColorByBg(RD7Color_Header);
+        RenderD7::Draw2::Text(R7Vec2(5, 40 + (ix - start_index) * 15),
+                              it->second.func_name);
+        RenderD7::Draw2::Text(R7Vec2(395, 40 + (ix - start_index) * 15),
+                              RenderD7::MsTimeFmt(it->second.time_of),
+                              RD7TextFlags_AlignRight);
+        RenderD7::UndoColorEdit(RD7Color_Text);
+
+      } else {
+        // Use List 0 cause no reference for screenpos
+        RenderD7::TextColorByBg(RD7Color_List0);
+        RenderD7::Draw2::Text(R7Vec2(5, 40 + (ix - start_index) * 15),
+                              it->second.func_name);
+        RenderD7::Draw2::Text(R7Vec2(395, 40 + (ix - start_index) * 15),
+                              RenderD7::MsTimeFmt(it->second.time_of),
+                              RD7TextFlags_AlignRight);
+        RenderD7::UndoColorEdit(RD7Color_Text);
       }
-      auto clr = ix == ftrace_index
-                     ? RD7Color_Selector
-                     : (ix % 2 == 0 ? RD7Color_List0 : RD7Color_List1);
-      UI7::GetBackgroundList()->AddText(R7Vec2(5, 40 + (ix - start_index) * 15),
-                                        it->second.func_name,
-                                        RenderD7::ThemeActive()->AutoText(clr));
-      UI7::GetBackgroundList()->AddText(
-          R7Vec2(395, 40 + (ix - start_index) * 15),
-          RenderD7::MsTimeFmt(it->second.time_of),
-          RenderD7::ThemeActive()->AutoText(clr), RD7TextFlags_AlignRight);
       ++it;
       ++ix;
     }
 
     RenderD7::Ftrace::End("rd7ft", "display_traces");
 
-    RenderD7::R2::OnScreen(R2Screen_Bottom);
+    RenderD7::OnScreen(Bottom);
     if (UI7::BeginMenu("Press \uE001 to go back!")) {
       auto jt = RenderD7::Ftrace::rd7_traces.begin();
       std::advance(jt, ftrace_index);
@@ -709,20 +714,16 @@ void RenderD7::RSettings::Draw(void) const {
       UI7::Label("Function: " + jt->second.func_name);
       UI7::Checkbox("In Overlay", jt->second.is_ovl);
       UI7::Label("Time: " + RenderD7::MsTimeFmt(jt->second.time_of));
-      UI7::Label("Max: " + RenderD7::MsTimeFmt(jt->second.time_ofm));
-      UI7::Label("TS: " + std::to_string(jt->second.time_start));
-      UI7::Label("TE: " + std::to_string(jt->second.time_end));
-      UI7::Label("SVC_Stk: " + std::to_string(svcGetSystemTick()));
       UI7::EndMenu();
     }
   } else if (m_state == RUI7) {
-    RenderD7::R2::OnScreen(R2Screen_Top);
+    RenderD7::OnScreen(Top);
     if (UI7::BeginMenu("RenderD7 -> UI7")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
       UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
       UI7::Label("Time: " + std::to_string(UI7::GetTime()));
-      UI7::Label("Delta: " + std::to_string(UI7::GetDeltaTime() * 1000.f));
+      UI7::Label("Delta: " + std::to_string(UI7::GetDeltaTime()));
       UI7::Label("Hid Down Touch: " +
                  std::to_string(Hid::IsEvent("touch", Hid::Down)));
       UI7::Label("Hid Held Touch: " +
@@ -734,35 +735,27 @@ void RenderD7::RSettings::Draw(void) const {
       UI7::Label(
           "Touch Last Pos: " + std::to_string(Hid::GetLastTouchPosition().x) +
           ", " + std::to_string(Hid::GetLastTouchPosition().y));
-      UI7::Label(
-          "Touch Down Pos: " + std::to_string(Hid::GetTouchDownPosition().x) +
-          ", " + std::to_string(Hid::GetTouchDownPosition().y));
       UI7::EndMenu();
     }
 
-    RenderD7::R2::OnScreen(R2Screen_Bottom);
-    if (UI7::BeginMenu("Press \uE001 to go back!", R7Vec2(),
-                       UI7MenuFlags_Scrolling)) {
+    RenderD7::OnScreen(Bottom);
+    if (UI7::BeginMenu("Press \uE001 to go back!")) {
       if (UI7::Button("Go back")) {
         /// Request a state switch to state RSETTINGS
         shared_request[0x00000001] = RSETTINGS;
       }
-      UI7::Checkbox("Debug", UI7::IsDebugging());
-      UI7::Checkbox("ShowMenuInfo", UI7::DebugMenu());
       UI7::EndMenu();
     }
-  } else if (m_state == ROVERLAYS) {
-    RenderD7::R2::OnScreen(R2Screen_Top);
-    if (UI7::BeginMenu("RenderD7 -> Overlays")) {
+  } else if (m_state == RMCONFIG) {
+    RenderD7::OnScreen(Top);
+    if (UI7::BeginMenu("RenderD7 -> Metrik")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
       UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
-      UI7::Label("Metrik Overlay: " + mtovlstate);
-      UI7::Label("Metrik Screen: " + mtscreenstate);
       UI7::EndMenu();
     }
 
-    RenderD7::R2::OnScreen(R2Screen_Bottom);
+    RenderD7::OnScreen(Bottom);
     if (UI7::BeginMenu("Press \uE001 to go back!")) {
       UI7::Label("Metrik:");
       UI7::Checkbox("Enable Overlay", rd7i_metrikd);
@@ -774,21 +767,6 @@ void RenderD7::RSettings::Draw(void) const {
         /// Request a state switch to state RSETTINGS
         shared_request[0x00000001] = RSETTINGS;
       }
-      UI7::EndMenu();
-    }
-  } else if (m_state == RLOGS) {
-    RenderD7::R2::OnScreen(R2Screen_Top);
-    if (UI7::BeginMenu("RenderD7 -> Logs")) {
-      UI7::SetCursorPos(R7Vec2(395, 2));
-      UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
-      UI7::RestoreCursor();
-      UI7::EndMenu();
-    }
-
-    RenderD7::R2::OnScreen(R2Screen_Bottom);
-    if (UI7::BeginMenu("Press \uE001 to go back!", R7Vec2(),
-                       UI7MenuFlags_Scrolling)) {
-      for (auto &it : rd7i_logger->Lines()) UI7::Label(it, RD7TextFlags_Wrap);
       UI7::EndMenu();
     }
   }
@@ -804,7 +782,6 @@ void RenderD7::RSettings::Logic() {
         std::fstream cfg_wrt(rd7i_config_path + "/config.rc7", std::ios::out);
         rd7i_config["metrik-settings"]["enableoverlay"] = rd7i_metrikd;
         rd7i_config["metrik-settings"]["Screen"] = rd7i_mt_screen;
-        rd7i_config["internal_logger"]["nowritetxt"] = rd7i_lggrf;
         cfg_wrt << rd7i_config.dump(4);
         cfg_wrt.close();
         rd7i_settings = false;
@@ -814,8 +791,7 @@ void RenderD7::RSettings::Logic() {
         return;
       }
     } else if (it.first == 0x00000003) {
-      if (it.second)
-        RenderD7::AddOvl(std::make_unique<Ovl_Keyboard>(kbd_test, kbd_state));
+      if (it.second) RenderD7::AddOvl(std::make_unique<Ovl_Keyboard>(kbd_test));
     }
   }
   /// Clear if handled
@@ -831,11 +807,12 @@ void RenderD7::RSettings::Logic() {
   stateftold = rd7i_ftraced;
 
   if (m_state == RSETTINGS) {
+    mtovlstate = rd7i_metrikd ? "true" : "false";
+    mtscreenstate = rd7i_mt_screen ? "Bottom" : "Top";
     if (d7_hDown & KEY_B) {
       std::fstream cfg_wrt(rd7i_config_path + "/config.rc7", std::ios::out);
       rd7i_config["metrik-settings"]["enableoverlay"] = rd7i_metrikd;
       rd7i_config["metrik-settings"]["Screen"] = rd7i_mt_screen;
-      rd7i_config["internal_logger"]["nowritetxt"] = rd7i_lggrf;
       cfg_wrt << rd7i_config.dump(4);
       cfg_wrt.close();
       rd7i_settings = false;
@@ -843,19 +820,17 @@ void RenderD7::RSettings::Logic() {
       RenderD7::Scene::Back();
     }
   }
+  if (m_state == RINFO) {
+    if (d7_hDown & KEY_B) {
+      m_state = RSETTINGS;
+    }
+  }
   if (m_state == RUI7) {
     if (d7_hDown & KEY_B) {
       m_state = RSETTINGS;
     }
   }
-  if (m_state == ROVERLAYS) {
-    mtovlstate = rd7i_metrikd ? "true" : "false";
-    mtscreenstate = rd7i_mt_screen ? "Bottom" : "Top";
-    if (d7_hDown & KEY_B) {
-      m_state = RSETTINGS;
-    }
-  }
-  if (m_state == RIDB || m_state == RLOGS) {
+  if (m_state == RSERVICES) {
     if (d7_hDown & KEY_B) {
       m_state = RSETTINGS;
     }
@@ -877,10 +852,6 @@ void RenderD7::RSettings::Logic() {
 void RenderD7::LoadSettings() {
   if (!rd7i_settings)
     RenderD7::Scene::Load(std::make_unique<RenderD7::RSettings>());
-}
-
-void RenderD7::LoadThemeEditor() {
-  RenderD7::Scene::Load(std::make_unique<RenderD7::ThemeEditor>());
 }
 
 void RenderD7::AddOvl(std::unique_ptr<RenderD7::Ovl> overlay) {
@@ -907,16 +878,16 @@ void RenderD7::FadeDisplay() { Npifade(); }
 
 float RenderD7::GetTime() { return rd7i_time; }
 
-std::string RenderD7::GetAppDirectory() {
-  std::string dir = "sdmc:/RenderD7/Apps/" + rd7i_app_name;
-  if (!std::filesystem::is_directory(dir))
-    std::filesystem::create_directories(dir);
-  return dir;
+C2D_Font RenderD7::LoadFont(const std::string &path) {
+  std::ifstream ft(path, std::ios::in | std::ios::binary);
+  bool io = ft.is_open();
+  ft.close();
+  if (!io)
+    return nullptr;
+  else
+    return C2D_FontLoad(path.c_str());
 }
 
-std::string RenderD7::GetDataDirectory() {
-  std::string dir = GetAppDirectory() + "/data";
-  if (!std::filesystem::is_directory(dir))
-    std::filesystem::create_directories(dir);
-  return dir;
+std::string RenderD7::GetAppDirectory() {
+  return "sdmc:/RenderD7/Apps/" + rd7i_app_name;
 }

@@ -1,6 +1,8 @@
+#include <filesystem>
 #include <fstream>
-#include <iostream>
+#include <map>
 #include <renderd7/nimg.hpp>
+#include <sstream>
 
 // Use an Npi simplifier cause I am lazy
 #define reca_cc(x) reinterpret_cast<const char*>(x)

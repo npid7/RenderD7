@@ -9,3 +9,4 @@ docs/*
 !docs/overrides
 !docs/stylesheets
 site/*
+build/

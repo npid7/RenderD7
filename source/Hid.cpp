@@ -3,7 +3,7 @@
 
 namespace RenderD7 {
 class HidApi {
- public:
+public:
   HidApi() {}
   ~HidApi() {}
 
@@ -15,7 +15,7 @@ class HidApi {
   void setJS1Movement(R7Vec2 &mvmt) { js1_mv = &mvmt; }
   void setJS2Movement(R7Vec2 &mvmt) { js2_mv = &mvmt; }
   void bindKey(const std::string &event, uint32_t key) {
-    key_bindings[event] = key;  // Overrides if existing
+    key_bindings[event] = key; // Overrides if existing
   }
   void lock(bool lock) { locked = lock; }
 
@@ -23,7 +23,6 @@ class HidApi {
     // Clears Functionality for 1 Frame
     last_touch_pos = R7Vec2();
     touch_pos[0] = R7Vec2();
-    dtp = R7Vec2();
     backups[Hid::Down] = 0;
     backups[Hid::Held] = 0;
     backups[Hid::Up] = 0;
@@ -31,32 +30,26 @@ class HidApi {
   }
 
   bool isEvent(const std::string &event, Hid::Actions action) {
-    if (locked) return false;
+    if (locked)
+      return false;
     if (key_bindings.find(event) == key_bindings.end())
-      return false;  // Unknown Event
+      return false; // Unknown Event
     if (backups.find(action) == backups.end())
-      return false;  // What? NOT Alowed acrion
+      return false; // What? NOT Alowed acrion
     if (backups[action] & key_bindings[event])
-      return true;  // Action contains key as flag
-    return false;   // Nothing to do
+      return true; // Action contains key as flag
+    return false;  // Nothing to do
   }
 
   R7Vec2 getTouchPos() { return touch_pos[0]; }
   R7Vec2 getLastTouchPos() { return last_touch_pos; }
-  R7Vec2 getTouchDownPos() { return dtp; }
 
   void update() {
     last_touch_pos = touch_pos[0];
-    if (isEvent("touch", Hid::Down)) {
-      dtp = touch_pos[0];
-    }
-    if (isEvent("touch", Hid::Up)) {
-      dtp = R7Vec2();
-    }
     for (const auto &it : actions) {
       backups[it.first] = it.second[0];
     }
-    if (locked) {
+    if(locked) {
       actions[Hid::Down][0] = 0;
       actions[Hid::Held][0] = 0;
       actions[Hid::Up][0] = 0;
@@ -64,7 +57,7 @@ class HidApi {
     }
   }
 
- private:
+private:
   std::map<Hid::Actions, uint32_t *> actions;
   std::map<Hid::Actions, uint32_t> backups;
   R7Vec2 *touch_pos = nullptr;
@@ -72,7 +65,6 @@ class HidApi {
   R7Vec2 *js2_mv = nullptr;
 
   R7Vec2 last_touch_pos;
-  R7Vec2 dtp;
 
   std::map<std::string, uint32_t> key_bindings;
   bool locked = false;
@@ -111,10 +103,9 @@ bool IsEvent(const std::string &event, Actions action) {
 }
 R7Vec2 GetTouchPosition() { return hid_handler.getTouchPos(); }
 R7Vec2 GetLastTouchPosition() { return hid_handler.getLastTouchPos(); }
-R7Vec2 GetTouchDownPosition() { return hid_handler.getTouchDownPos(); }
 void Update() { hid_handler.update(); }
 void Lock() { hid_handler.lock(true); }
 void Unlock() { hid_handler.lock(false); }
 void Clear() { hid_handler.clear(); }
-}  // namespace Hid
-}  // namespace RenderD7
+} // namespace Hid
+} // namespace RenderD7

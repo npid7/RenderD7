@@ -1,13 +1,13 @@
 #pragma once
-#include <functional>
+#include <3ds.h>
+#include <vector>
 
 namespace RenderD7 {
 namespace Tasks {
 /// @brief Push A Task
-/// @param fun Function of Your Task
-/// @return index
-int Create(std::function<void()> fun);
+/// @param entrypoint Function of Your Task
+void create(ThreadFunc entrypoint);
 /// @brief Destroy all Tasks
-void DestroyAll();
-}  // namespace Tasks
-}  // namespace RenderD7
+void destroy(void);
+} // namespace Tasks
+} // namespace RenderD7

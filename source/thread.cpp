@@ -13,7 +13,8 @@ Thread::Thread(std::function<void(RenderD7::Parameter)> t_function,
 Thread::~Thread() {
   join();
 
-  if (m_started) threadFree(m_thread);
+  if (m_started)
+    threadFree(m_thread);
 }
 
 void Thread::initialize(std::function<void(RenderD7::Parameter)> t_function,
@@ -74,4 +75,4 @@ void Thread::threadFunction(void *arg) {
   data.m_function(data.m_parameter);
   *data.m_running = false;
 }
-}  // namespace RenderD7
+} // namespace RenderD7

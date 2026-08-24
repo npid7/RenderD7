@@ -1,7 +1,6 @@
 #include <renderd7/external/stb_image.h>
 
 #include <renderd7/Image.hpp>
-#include <renderd7/internal_db.hpp>
 #include <vector>
 
 static u32 __rd7i_gp2o__(u32 v) {
@@ -31,151 +30,139 @@ static void __rd7i_r24r32(std::vector<uint8_t> &out,
   }
 }
 
-static void __rd7i_maketex__(C3D_Tex *tex, Tex3DS_SubTexture *sub,
-                             std::vector<unsigned char> &buf, int w, int h) {
-  if (!tex || !sub) {
-    _rd7i_logger()->Write("Invalid Inpit (objects have no adress!)");
-    return;
-  }
-  // RGBA -> Abgr
-  for (int y = 0; y < h; y++) {
-    for (int x = 0; x < w; x++) {
-      int pos = (x + y * w) * 4;
-      auto r = buf[pos + 0];
-      auto g = buf[pos + 1];
-      auto b = buf[pos + 2];
-      auto a = buf[pos + 3];
-      buf[pos + 0] = a;
-      buf[pos + 1] = b;
-      buf[pos + 2] = g;
-      buf[pos + 3] = r;
+static void __rd7i_c3dc2d__(C3D_Tex *tex, Tex3DS_SubTexture *subtex, u8 *buf,
+                            u32 size, u32 width, u32 height) {
+  // RGBA -> ABGR
+  for (u32 row = 0; row < width; row++) {
+    for (u32 col = 0; col < height; col++) {
+      u32 z = (row + col * width) * 4;
+
+      u8 r = *(u8 *)(buf + z);
+      u8 g = *(u8 *)(buf + z + 1);
+      u8 b = *(u8 *)(buf + z + 2);
+      u8 a = *(u8 *)(buf + z + 3);
+
+      *(buf + z) = a;
+      *(buf + z + 1) = b;
+      *(buf + z + 2) = g;
+      *(buf + z + 3) = r;
     }
   }
 
-  // Pow2
-  int wp2 = __rd7i_gp2o__((unsigned int)w);
-  int hp2 = __rd7i_gp2o__((unsigned int)h);
+  u32 w_pow2 = __rd7i_gp2o__(width);
+  u32 h_pow2 = __rd7i_gp2o__(height);
 
-  sub->width = (u16)w;
-  sub->height = (u16)h;
-  sub->left = 0.0f;
-  sub->top = 1.0f;
-  sub->right = ((float)w / (float)wp2);
-  sub->bottom = 1.0 - ((float)h / (float)hp2);
+  subtex->width = (u16)width;
+  subtex->height = (u16)height;
+  subtex->left = 0.0f;
+  subtex->top = 1.0f;
+  subtex->right = (width / (float)w_pow2);
+  subtex->bottom = 1.0 - (height / (float)h_pow2);
 
-  // Texture Setup
-  C3D_TexInit(tex, (u16)wp2, (u16)hp2, GPU_RGBA8);
+  C3D_TexInit(tex, (u16)w_pow2, (u16)h_pow2, GPU_RGBA8);
   C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST);
+
+  u32 pixel_size = (size / width / height);
 
   memset(tex->data, 0, tex->size);
 
-  for (int x = 0; x < w; x++) {
-    for (int y = 0; y < h; y++) {
-      int dst_pos = ((((y >> 3) * (wp2 >> 3) + (x >> 3)) << 6) +
+  for (u32 x = 0; x < width; x++) {
+    for (u32 y = 0; y < height; y++) {
+      u32 dst_pos = ((((y >> 3) * (w_pow2 >> 3) + (x >> 3)) << 6) +
                      ((x & 1) | ((y & 1) << 1) | ((x & 2) << 1) |
                       ((y & 2) << 2) | ((x & 4) << 2) | ((y & 4) << 3))) *
-                    4;
-      int src_pos = (y * w + x) * 4;
+                    pixel_size;
+      u32 src_pos = (y * width + x) * pixel_size;
 
-      memcpy(&((unsigned char *)tex->data)[dst_pos], &buf[src_pos], 4);
+      memcpy(&((u8 *)tex->data)[dst_pos], &((u8 *)buf)[src_pos], pixel_size);
     }
   }
 
   C3D_TexFlush(tex);
+
   tex->border = 0x00000000;
   C3D_TexSetWrap(tex, GPU_CLAMP_TO_BORDER, GPU_CLAMP_TO_BORDER);
+  // linearFree(buf);
 }
 
 namespace RenderD7 {
+Image::Image() {
+  img.tex = nullptr;
+  img.subtex = nullptr;
+}
 
-void Image::Load(const std::string &path) {
+Image::~Image() { safe_del(); }
+
+void Image::load(const std::string &path) {
   // Make sure to cleanup
-  Delete();
-  ext = false;
+  safe_del();
+  ld = false;
   // Setup Func and Load Data
   int w, h, c = 0;
-  unsigned char *image = stbi_load(path.c_str(), &w, &h, &c, 4);
+  uint8_t *image = stbi_load(path.c_str(), &w, &h, &c, 4);
   if (image == nullptr) {
-    //_rd7i_logger()->Write("Failed to Load Image: " + path);
     return;
   }
   // Size/Fmt Check
   if (w > 1024 || h > 1024) {
     // Reason: Image to Large
-    //_rd7i_logger()->Write("Image too Large!");
     stbi_image_free(image);
     return;
   }
 
-  std::vector<unsigned char> wimg;
+  std::vector<uint8_t> wimg(w * h * 4);
   if (c == 3) {
-    //_rd7i_logger()->Write("Convert Image to RGBA");
     stbi_image_free(image);
     image = stbi_load(path.c_str(), &w, &h, &c, 3);
-    wimg.resize(w * h * 4);
-    __rd7i_r24r32(wimg, std::vector<unsigned char>(image, image + (w * h * 3)),
-                  w, h);
+    __rd7i_r24r32(wimg, std::vector<uint8_t>(image, image + (w * h * 3)), w, h);
   } else {
-    wimg.assign(&image[0], &image[(w * h * 4) - 1]);
-    stbi_image_free(image);
+    // Maybe find a better solution later
+    for (size_t i = 0; i < wimg.size(); i++) {
+      wimg[i] = image[i];
+    }
   }
+  stbi_image_free(image);
   // Create C2D_Image
   C3D_Tex *tex = new C3D_Tex;
   Tex3DS_SubTexture *subtex = new Tex3DS_SubTexture;
-  __rd7i_maketex__(tex, subtex, wimg, w, h);
-  _rd7i_logger()->Write(RenderD7::FormatString("Created Texture (%d, %d)",
-                                               tex->width, tex->height));
-  img = {tex, subtex};
+  __rd7i_c3dc2d__(tex, subtex, wimg.data(), (u32)(w * h * 4), (u32)w, (u32)h);
+  img.tex = tex;
+  img.subtex = subtex;
+  ld = true;
 }
 
-void Image::From_NIMG(const nimg &image) {
+void Image::from_nimg(const nimg &image) {
   // Make sure to cleanup
-  Delete();
-  ext = false;
+  safe_del();
+  ld = false;
   if (image.width > 1024 || image.height > 1024) return;
   C3D_Tex *tex = new C3D_Tex;
   Tex3DS_SubTexture *subtex = new Tex3DS_SubTexture;
-  std::vector<unsigned char> mdpb = image.pixel_buffer;
-  __rd7i_maketex__(tex, subtex, mdpb, image.width, image.height);
-  img = {tex, subtex};
+  __rd7i_c3dc2d__(tex, subtex, (u8 *)image.pixel_buffer.data(),
+                  (u32)image.pixel_buffer.size(), (u32)image.width,
+                  (u32)image.height);
+  img.tex = tex;
+  img.subtex = subtex;
+  ld = true;
 }
 
-C2D_Image Image::Get() {
-  if (!Loadet()) {
-    _rd7i_logger()->Write("Image not Loadet!");
-  }
-  return img;
-}
-C2D_Image &Image::GetRef() {
-  if (!Loadet()) {
-    _rd7i_logger()->Write("Image not Loadet!");
-  }
-  return img;
-}
+C2D_Image Image::get() { return img; }
+C2D_Image &Image::get_ref() { return img; }
 
-void Image::Set(const C2D_Image &i) {
-  Delete();
-  ext = true;
+void Image::set(const C2D_Image &i) {
+  safe_del();
   img = i;
 }
 
-R7Vec2 Image::GetSize() {
+R7Vec2 Image::get_size() {
   if (!img.subtex) return R7Vec2(0, 0);
   return R7Vec2(img.subtex->width, img.subtex->height);
 }
 
-void Image::Delete() {
-  if (ext) return;
-  if (img.subtex != nullptr) {
-    delete img.subtex;
-    img.subtex = nullptr;
-  }
-  if (img.tex != nullptr) {
-    C3D_TexDelete(img.tex);
-    delete img.tex;
-    img.tex = nullptr;
-  }
+void Image::safe_del() {
+  if (img.subtex != nullptr) delete img.subtex;
+  if (img.tex != nullptr) delete img.tex;
 }
 
-bool Image::Loadet() { return (img.subtex != nullptr && img.tex != nullptr); }
+bool Image::loaded() { return ld; }
 }  // namespace RenderD7

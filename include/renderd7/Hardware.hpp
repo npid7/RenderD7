@@ -11,16 +11,13 @@ bool IsHeadphones();
 /// @return true if System gets Charged
 bool IsCharging();
 /// @brief Check the Battery Percentage
-/// @return Persentage as int
-int GetBatteryPercentage();
+/// @return Persentage as float
+float GetBatteryPercentage();
 /// @brief Get current State of 3d Slider
 /// @return current 3dslider poition
 float Get3dSliderLevel();
 /// @brief Get Current state of Sound Slider
 /// @return current SoundSlider state
 float GetSoundSliderLevel();
-/// @brief Get Current Wifi Level
-/// @return current wifi level
-int GetWifiLevel();
-}  // namespace Hardware
-}  // namespace RenderD7
+} // namespace Hardware
+} // namespace RenderD7

@@ -1,11 +1,9 @@
 #pragma once
-#include <renderd7/Net.hpp>
+#include <renderd7/renderd7.hpp>
 #include <renderd7/external/json.hpp>
 #include <renderd7/global_db.hpp>
-#include <renderd7/renderd7.hpp>
 
-#define CFGVER "1"
-#define THEMEVER "0"
+#define CFGVER "0"
 
 #ifndef V_RD7BTIME
 #define V_RD7BTIME "SUBMODULE"
@@ -14,11 +12,7 @@
 #define V_RD7CSTRING "SUBMODULE"
 #endif
 
-// Base
-extern bool rd7i_do_splash;
-extern bool rd7i_enable_scene_system;
-extern bool rd7i_debugging;
-extern bool rd7i_enable_memtrack;
+/// Base ///
 extern std::string rd7i_app_name;
 extern std::string rd7i_config_path;
 extern nlohmann::json rd7i_config;
@@ -43,13 +37,14 @@ extern bool rd7i_mt_screen;
 extern float rd7i_mt_txtSize;
 extern bool rd7i_metrikd;
 extern bool rd7i_ftraced;
+extern bool rd7i_current_screen;
 extern u64 rd7i_delta_time;
 extern u64 rd7i_last_tm;
 extern float rd7i_dtm;
 extern float rd7i_time;
 extern bool rd7i_fadeout;
 extern bool rd7i_fadein;
-extern bool rd7i_fadeout2;
+extern bool rd7i_fadeout2; 
 extern bool rd7i_fadein2;
 extern int rd7i_fadealpha;
 extern int rd7i_fadecolor;
@@ -58,13 +53,3 @@ extern bool rd7i_fade_exit;
 extern bool rd7i_fade_scene_wait;
 extern bool rd7i_idb_running;
 extern bool rd7i_graphics_on;
-extern bool rd7i_amdt;
-extern void* rd7i_soc_buf;
-extern bool rd7i_is_am_init;
-extern RenderD7::Theme::Ref rd7i_active_theme;
-extern bool rd7i_lggrf;
-
-// Use function for protection
-RenderD7::LoggerBase::Ref _rd7i_logger();
-RenderD7::Net::Error rd7i_soc_init();
-void rd7i_soc_deinit();

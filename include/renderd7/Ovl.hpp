@@ -1,11 +1,10 @@
 #pragma once
-#include <map>
 #include <memory>
 
 namespace RenderD7 {
 /// @brief The Overlay Class (Used for Toasts for example)
 class Ovl {
- public:
+public:
   /// @brief Deconstructor
   virtual ~Ovl() {}
   /// @brief Function Called to Draw this
@@ -18,11 +17,11 @@ class Ovl {
   /// @brief Kill The Overlay
   inline void Kill() { iskilled = true; }
 
- private:
+private:
   /// @param iskilled For IsKilled();
   bool iskilled = false;
 };
 /// @brief Add an Overlay to the Screen
 /// @param scene Overlay to push to Screen
 void AddOvl(std::unique_ptr<RenderD7::Ovl> scene);
-}  // namespace RenderD7
+} // namespace RenderD7

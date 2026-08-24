@@ -1,13 +1,14 @@
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
+#include <memory>
 
 namespace RenderD7 {
 namespace Memory {
 /// @brief Metriks struct For the Internal Tracker
 struct memory_metrics {
-  uint32_t t_TotalAllocated = 0;  ///< Total Allocated Memory
-  uint32_t t_TotalFreed = 0;      ///< Total Deleted Memory
+  uint32_t t_TotalAllocated = 0; ///< Total Allocated Memory
+  uint32_t t_TotalFreed = 0;     ///< Total Deleted Memory
   /// @brief Gets the Currently Allocated Memory
   uint32_t t_CurrentlyAllocated() { return t_TotalAllocated - t_TotalFreed; }
 };
@@ -20,5 +21,5 @@ size_t GetTotalFreed();
 /// @brief Get Current Allocated Memory
 /// @return Current Allocated Memory
 size_t GetCurrent();
-}  // namespace Memory
-}  // namespace RenderD7
+} // namespace Memory
+} // namespace RenderD7

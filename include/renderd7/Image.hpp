@@ -1,33 +1,30 @@
 #pragma once
 
-#include <3ds.h>
 #include <citro2d.h>
+#include <3ds.h>
 
 #include <renderd7/R7Vec.hpp>
 #include <renderd7/nimg.hpp>
-#include <renderd7/smart_ctor.hpp>
+
 #include <string>
 
 namespace RenderD7 {
-class Image {
- public:
-  Image() = default;
-  Image(C2D_Image img) { this->img = img; }
-  Image(const std::string& path) { this->Load(path); }
-  ~Image() = default;
-  RD7_SMART_CTOR(Image)
-  void Load(const std::string& path);
-  void From_NIMG(const nimg& image);
-  void Delete();
+    class Image {
+        public:
+        Image();
+        ~Image();
+        void load(const std::string& path);
+        void from_nimg(const nimg& image);
 
-  C2D_Image Get();
-  C2D_Image& GetRef();
-  void Set(const C2D_Image& i);
-  R7Vec2 GetSize();
-  bool Loadet();
+        C2D_Image get();
+        C2D_Image& get_ref();
+        void set(const C2D_Image& i);
+        R7Vec2 get_size();
+        bool loaded();
 
- private:
-  bool ext = false;
-  C2D_Image img;
-};
-}  // namespace RenderD7
+        private:
+        void safe_del();
+        bool ld = false;
+        C2D_Image img;
+    };
+}

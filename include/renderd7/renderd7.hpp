@@ -1,10 +1,18 @@
 #pragma once
 /// c++ Includes
+#include <algorithm>
+#include <codecvt>
 #include <cstring>
+#include <filesystem>
+#include <functional>
+#include <iostream>
+#include <locale>
 #include <map>
 #include <memory>
+#include <random>
 #include <stack>
 #include <string>
+#include <vector>
 /// c includes
 #include <dirent.h>
 #include <stdio.h>
@@ -19,17 +27,18 @@
 #include <renderd7/Color.hpp>
 #include <renderd7/FunctionTrace.hpp>
 #include <renderd7/Hardware.hpp>
-#include <renderd7/Logger.hpp>
 #include <renderd7/Memory.hpp>
-#include <renderd7/Overlays.hpp>
 #include <renderd7/Ovl.hpp>
-#include <renderd7/Render2.hpp>
 #include <renderd7/ResultDecoder.hpp>
+#include <renderd7/Screen.hpp>
+#include <renderd7/Security.hpp>
 #include <renderd7/Sheet.hpp>
 #include <renderd7/Sprite.hpp>
 #include <renderd7/SpriteAnimation.hpp>
 #include <renderd7/Tasks.hpp>
 #include <renderd7/Time.hpp>
+#include <renderd7/external/lodepng.h>
+#include <renderd7/ini.hpp>
 #include <renderd7/lang.hpp>
 #include <renderd7/parameter.hpp>
 #include <renderd7/stringtool.hpp>
@@ -39,21 +48,33 @@
 
 #define DEFAULT_CENTER 0.5f
 
+/// @param rd7_do_splash Config Value To Enable RenderD7 Splash
+extern bool rd7_do_splash;
+/// @param rd7_enable_memtrack Config Value to Track Mem Allocations
+extern bool rd7_enable_memtrack;
 /// @param rd7_max_objects Config Param for C2D Mac objects
 extern int rd7_max_objects;
+/// @param rd7_enable_scene_system Enable/Disable Scene System (for example for your own implementations)
+extern bool rd7_enable_scene_system;
 
+/// RenderD7
 namespace RenderD7 {
-// Reference to the New Renderer
-R2Base::Ref R2();
-// Reference to Global Logger
-LoggerBase::Ref Logger();
 /// @brief Get Deltatime
 /// @return Deltatime
 float GetDeltaTime();
 
+/// @brief A Button
+struct TObject {
+  int x;                 ///< Position X
+  int y;                 ///< Position Y
+  int w;                 ///< Button Width
+  int h;                 ///< Button Height
+  std::string text = ""; ///< Text
+  float txtsize = 0.7f;  ///< Set Text Size
+};
 /// @brief Scene Class
 class Scene {
- public:
+public:
   /// @brief Stack of the Scenes
   static std::stack<std::unique_ptr<Scene>> scenes;
   /// @brief Deconstructor
@@ -74,15 +95,16 @@ class Scene {
 
 /// @brief Integrated Setting Menu of RenderD7
 class RSettings : public RenderD7::Scene {
- private:
+private:
   /// @brief State (Define for Menus)
   enum RState {
-    RSETTINGS,  // Main Settings Menu
-    RIDB,       // Internal Debugger
-    ROVERLAYS,  // Overlay Settings
-    RFTRACE,    // FTRace Menu
-    RUI7,       // UI7 Menu
-    RLOGS,      // Logs
+    RSETTINGS,
+    RINFO,
+    RSERVICES,
+    RMCONFIG,
+    RFTRACE,
+    RUI7,
+    RCREDITS
   };
 
   /// @param shared_request Defines requests from Draw to Logic
@@ -101,12 +123,10 @@ class RSettings : public RenderD7::Scene {
   /// @param mtscreenstate Screen the Overlay is Set to
   std::string mtscreenstate = "Top";
   std::string kbd_test;
-  RD7KeyboardState kbd_state;
   bool statemtold = false;
   bool stateftold = false;
-  float tmp_txt;
 
- public:
+public:
   /// @brief Constructor
   RSettings();
   /// @brief Override for Draw
@@ -119,8 +139,6 @@ class RSettings : public RenderD7::Scene {
 
 /// @brief Show Up the RenderD7-Settings Menu
 void LoadSettings();
-/// @brief Show Up The Theme Editor
-void LoadThemeEditor();
 /// @brief Get's The Programs Time running
 /// @return Time Running
 float GetTime();
@@ -133,6 +151,18 @@ int GetFps();
 /// @param e To
 /// @return Random Int
 int GetRandomInt(int b, int e);
+/// @brief DrawMetrikOvl (YOUR OWN RISK)
+void DrawMetrikOvl();
+/// @brief Draw Image from RenderD7 Sheet
+/// @param sheet Spritesheet
+/// @param index Image index Value
+/// @param x Pos X
+/// @param y Pos Y
+/// @param scaleX Scale on X-Axis
+/// @param scaleY Scale on Y-Axis
+/// @return success ?
+bool DrawImageFromSheet(RenderD7::Sheet *sheet, size_t index, float x, float y,
+                        float scaleX = 1.0, float scaleY = 1.0);
 /// @brief Fade In
 /// @param duration Duration in Frames
 void FadeIn();
@@ -141,6 +171,11 @@ void FadeIn();
 void FadeOut();
 /// @brief Display Fade Effects
 void FadeDisplay();
+
+/// @brief Loads a font
+/// @param path path to font (bcfnt)
+/// @return link to C2D_Font Object
+C2D_Font LoadFont(const std::string& path);
 
 namespace Init {
 /// @brief Init Default RenderD7
@@ -158,14 +193,29 @@ Result Reload();
 void Graphics();
 /// @brief Init Ndsp for Sounds
 void NdspFirm();
-}  // namespace Init
+} // namespace Init
+
+namespace Convert {
+/// @brief Convert a String to Flaot
+/// @param inp Input String
+/// @return Float
+inline float StringtoFloat(std::string inp) { return std::atof(inp.c_str()); }
+/// @brief Convert String to Int
+/// @param inp Input String
+/// @return Int
+inline int StringtoInt(std::string inp) { return std::atoi(inp.c_str()); }
+/// @brief Convert a Float to Bool
+/// @param inp Input Float
+/// @return Bool
+inline bool FloatToBool(float inp) { return (inp == 1 ? true : false); }
+} // namespace Convert
 
 namespace FS {
 /// @brief Check if File exists
 /// @param path Path to the File
 /// @return exists or not
 bool FileExist(const std::string &path);
-}  // namespace FS
+} // namespace FS
 
 /// @brief Check if Ndsp is Init
 /// @return is or not
@@ -190,7 +240,4 @@ void FrameEnd();
 /// @brief Returns App Working Directory path
 /// @return AppDir Path
 std::string GetAppDirectory();
-/// @brief returns path to the Data Directory
-/// @return data dir path
-std::string GetDataDirectory();
-}  // namespace RenderD7
+} // namespace RenderD7
