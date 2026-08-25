@@ -27,16 +27,16 @@ void Error(const std::string& msg) {
       RenderD7::ClearTextBufs();
       C2D_TargetClear(rd7_top, 0x00000000);
       C2D_TargetClear(rd7_bottom, 0x00000000);
-      RenderD7::R2()->OnScreen(R2Screen_Top);
+      RenderD7::R2::OnScreen(R2Screen_Top);
       if (UI7::BeginMenu("RenderD7 - Error Manager", R7Vec2(),
                          UI7MenuFlags_TitleMid)) {
         UI7::Label(msg, RD7TextFlags_Wrap);
         UI7::Label("Press Start to Exit!");
         UI7::EndMenu();
       }
-      RenderD7::R2()->OnScreen(R2Screen_Bottom);
+      RenderD7::R2::OnScreen(R2Screen_Bottom);
       UI7::Update();
-      RenderD7::R2()->Process();
+      RenderD7::R2::Process();
       C3D_FrameEnd(0);
     }
     exit(0);

@@ -44,7 +44,7 @@ extern int rd7_max_objects;
 
 namespace RenderD7 {
 // Reference to the New Renderer
-R2Base::Ref R2();
+// R2Base::Ref R2();
 // Reference to Global Logger
 LoggerBase::Ref Logger();
 /// @brief Get Deltatime
