@@ -1,5 +1,6 @@
 #include <renderd7/external/stb_image.h>
 
+#include <format>
 #include <renderd7/Image.hpp>
 #include <renderd7/internal_db.hpp>
 #include <vector>
@@ -123,8 +124,8 @@ void Image::Load(const std::string& path) {
   C3D_Tex* tex = new C3D_Tex;
   Tex3DS_SubTexture* subtex = new Tex3DS_SubTexture;
   __rd7i_maketex__(tex, subtex, wimg, w, h);
-  _rd7i_logger()->Write(RenderD7::FormatString("Created Texture (%d, %d)",
-                                               tex->width, tex->height));
+  _rd7i_logger()->Write(
+      std::format("Created Texture ({}, {})", tex->width, tex->height));
   img = {tex, subtex};
 }
 

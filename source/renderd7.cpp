@@ -11,6 +11,7 @@
 #include <renderd7/internal_db.hpp>
 
 // C++ includes
+#include <array>
 #include <filesystem>
 #include <random>
 

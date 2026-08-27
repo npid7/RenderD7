@@ -44,7 +44,7 @@ target_include_directories(renderd7 PUBLIC
     $<INSTALL_INTERFACE:include>
     $ENV{DEVKITPRO}/portlibs/3ds/include # Steht leider nicht in den toolchains drinne :/
 )
-target_compile_definitions(renderd7 PRIVATE _GNU_SOURCE=1) # required for vasprintf (to be removed)
+
 target_link_libraries(renderd7 PUBLIC
     curl mbedtls mbedx509 mbedcrypto # CURL related
     citro2d # Render2 / Draw2 requirement (can't tell what is the current engine :/)
@@ -54,7 +54,7 @@ target_link_libraries(renderd7 PUBLIC
     m # base requirement for maths (oder so steh teigentlich in den toolchains schon drinne btw)
 )
 set_target_properties(renderd7 PROPERTIES
-    CXX_STANDARD 17 # Minimum für den momentanen stand
+    CXX_STANDARD 20 # Minimum für den momentanen stand
     CXX_STANDARD_REQUIRED true
     DEBUG_POSTFIX "d"
     MINSIZEREL_POSTFIX "ms"

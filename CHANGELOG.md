@@ -4,6 +4,7 @@
 
 - Replace RENDERD7VSTRING with RenderD7::BuildInfo::GetVersion()
 - Remove MemTrack
+- C++ 20 + Get vasprintf remived
 
 ## 0.9.5
 
