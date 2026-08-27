@@ -28,8 +28,7 @@ std::map<RD7Color, std::string> color_names = {
 RenderD7::ThemeEditor::ThemeEditor() {
   // Backup active Theme and create New one to edit
   temp_theme = RenderD7::ThemeActive();
-  edit_theme = RenderD7::Theme::New();
-  edit_theme->CopyOther(temp_theme);
+  edit_theme.CopyOther(temp_theme);
   RenderD7::ThemeSet(edit_theme);
 }
 
@@ -47,7 +46,7 @@ void RenderD7::ThemeEditor::Draw() const {
     UI7::Button("Button");
     UI7::Progressbar(0.5f);
     UI7::ColorSelector("Color Selector",
-                       edit_theme->GetTableRef()[RD7Color_Progressbar]);
+                       edit_theme.GetTableRef()[RD7Color_Progressbar]);
     UI7::EndMenu();
   }
   RenderD7::R2::OnScreen(R2Screen_Bottom);
@@ -55,7 +54,7 @@ void RenderD7::ThemeEditor::Draw() const {
     if (menu == 0) {
       if (UI7::Button("Create New")) {
         menu = 1;
-        edit_theme->Default();
+        edit_theme.Default();
       } else if (UI7::Button("Edit Current")) {
         menu = 1;
       } else if (UI7::Button("Select Theme")) {
@@ -68,14 +67,14 @@ void RenderD7::ThemeEditor::Draw() const {
       }
     } else if (menu == 1) {
       if (UI7::Button("Go back")) {
-        edit_theme->CopyOther(temp_theme);
+        edit_theme.CopyOther(temp_theme);
         menu = 0;
       } else if (UI7::Button("Save")) {
         RenderD7::AddOvl(std::make_unique<Ovl_Keyboard>(kbd_text, kbd_state,
                                                         "<name>.theme"));
       }
       for (auto& it : color_names) {
-        UI7::ColorSelector(it.second, edit_theme->GetTableRef()[it.first]);
+        UI7::ColorSelector(it.second, edit_theme.GetTableRef()[it.first]);
       }
     } else if (menu == 2) {
       if (UI7::Button("Go back")) {
@@ -83,13 +82,13 @@ void RenderD7::ThemeEditor::Draw() const {
       }
       for (auto& it : theme_list) {
         if (UI7::Button(it)) {
-          edit_theme->Load(RenderD7::GetAppDirectory() + "/themes/" + it);
+          edit_theme.Load(RenderD7::GetAppDirectory() + "/themes/" + it);
           menu = 1;
         }
         UI7::SameLine();
         if (UI7::Button("Make Current")) {
-          edit_theme->Load(RenderD7::GetAppDirectory() + "/themes/" + it);
-          temp_theme->CopyOther(edit_theme);
+          edit_theme.Load(RenderD7::GetAppDirectory() + "/themes/" + it);
+          temp_theme.CopyOther(edit_theme);
           menu = 0;
         }
         UI7::SameLine();
@@ -123,7 +122,7 @@ void RenderD7::ThemeEditor::Logic() {
         // Prompt Override
         return;
       }
-      edit_theme->Save(path);
+      edit_theme.Save(path);
     }
     kbd_state = RD7KeyboardState_None;
   }
@@ -131,7 +130,7 @@ void RenderD7::ThemeEditor::Logic() {
     if (menu == 0) {
       RenderD7::Scene::Back();
     } else {
-      if (menu == 1) edit_theme->CopyOther(temp_theme);
+      if (menu == 1) edit_theme.CopyOther(temp_theme);
       menu = 0;
     }
   }

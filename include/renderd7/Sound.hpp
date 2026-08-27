@@ -2,7 +2,6 @@
 
 #include <3ds.h>
 
-#include <renderd7/smart_ctor.hpp>
 #include <string>
 
 namespace RenderD7 {
@@ -16,7 +15,6 @@ class Sound {
   Sound(const std::string& path, int channel = 1, bool toloop = false);
   /// @brief Deconstructor
   ~Sound();
-  RD7_SMART_CTOR(Sound)
   /// @brief Play the sound
   void Play();
   /// @brief Stop the sound

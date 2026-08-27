@@ -35,7 +35,7 @@ static void __rd7i_r24r32(std::vector<uint8_t>& out,
 static void __rd7i_maketex__(C3D_Tex* tex, Tex3DS_SubTexture* sub,
                              std::vector<unsigned char>& buf, int w, int h) {
   if (!tex || !sub) {
-    _rd7i_logger()->Write("Invalid Inpit (objects have no adress!)");
+    _rd7i_logger().Write("Invalid Inpit (objects have no adress!)");
     return;
   }
   // RGBA -> Abgr
@@ -97,20 +97,20 @@ void Image::Load(const std::string& path) {
   int w, h, c = 0;
   unsigned char* image = stbi_load(path.c_str(), &w, &h, &c, 4);
   if (image == nullptr) {
-    //_rd7i_logger()->Write("Failed to Load Image: " + path);
+    //_rd7i_logger().Write("Failed to Load Image: " + path);
     return;
   }
   // Size/Fmt Check
   if (w > 1024 || h > 1024) {
     // Reason: Image to Large
-    //_rd7i_logger()->Write("Image too Large!");
+    //_rd7i_logger().Write("Image too Large!");
     stbi_image_free(image);
     return;
   }
 
   std::vector<unsigned char> wimg;
   if (c == 3) {
-    //_rd7i_logger()->Write("Convert Image to RGBA");
+    //_rd7i_logger().Write("Convert Image to RGBA");
     stbi_image_free(image);
     image = stbi_load(path.c_str(), &w, &h, &c, 3);
     wimg.resize(w * h * 4);
@@ -124,7 +124,7 @@ void Image::Load(const std::string& path) {
   C3D_Tex* tex = new C3D_Tex;
   Tex3DS_SubTexture* subtex = new Tex3DS_SubTexture;
   __rd7i_maketex__(tex, subtex, wimg, w, h);
-  _rd7i_logger()->Write(
+  _rd7i_logger().Write(
       std::format("Created Texture ({}, {})", tex->width, tex->height));
   img = {tex, subtex};
 }
@@ -143,13 +143,13 @@ void Image::From_NIMG(const nimg& image) {
 
 C2D_Image Image::Get() {
   if (!Loadet()) {
-    _rd7i_logger()->Write("Image not Loadet!");
+    _rd7i_logger().Write("Image not Loadet!");
   }
   return img;
 }
 C2D_Image& Image::GetRef() {
   if (!Loadet()) {
-    _rd7i_logger()->Write("Image not Loadet!");
+    _rd7i_logger().Write("Image not Loadet!");
   }
   return img;
 }

@@ -5,7 +5,6 @@
 
 #include <renderd7/Image.hpp>
 #include <renderd7/Sheet.hpp>
-#include <renderd7/smart_ctor.hpp>
 
 namespace RenderD7 {
 /// @brief Sprite Class
@@ -15,14 +14,13 @@ class Sprite {
   Sprite() = default;
   /// \brief Deconstruct Sprite
   ~Sprite() = default;
-  RD7_SMART_CTOR(Sprite)
   /// \brief Load a Sprite From SpriteSheet
   /// \param sheet the Sheet to load from.(RenderD7::Sheet)
   /// \param index the number of the Sprite in the Sheet
-  void FromSheet(RenderD7::Sheet::Ref sheet, size_t index);
+  void FromSheet(RenderD7::Sheet& sheet, size_t index);
   /// \brief Load a Sprite From SpriteSheet
   /// \param img the Image to load from.(RenderD7::Image)
-  void FromImage(RenderD7::Image::Ref img);
+  void FromImage(RenderD7::Image& img);
   /// @brief Draw the Sprite
   /// @return success ?
   bool Draw();

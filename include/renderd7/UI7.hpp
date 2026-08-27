@@ -3,7 +3,6 @@
 #include <renderd7/Image.hpp>
 #include <renderd7/R7Vec.hpp>
 #include <renderd7/Render2.hpp>
-#include <renderd7/smart_ctor.hpp>
 
 // UI7: The new RenderD7 UI Standart based on
 // Draw2 (based on Citro2D)
@@ -33,17 +32,15 @@ class UI7DrawList {
                RD7TextFlags flags = 0, R7Vec2 box = R7Vec2());
   void AddText(R7Vec2 pos, const std::string& text, unsigned int clr,
                RD7TextFlags flags = 0, R7Vec2 box = R7Vec2());
-  void AddImage(R7Vec2 pos, RenderD7::Image::Ref img);
-  void AddCall(std::shared_ptr<DrawCmd> cmd);
+  void AddImage(R7Vec2 pos, RenderD7::Image& img);
+  void AddCall(const DrawCmd& cmd);
 
   void Process(bool auto_clear = true);
   void Clear();
 
-  RD7_SMART_CTOR(UI7DrawList)
-
  private:
-  void AddDebugCall(std::shared_ptr<DrawCmd> cmd);
-  std::vector<std::shared_ptr<DrawCmd>> list;
+  void AddDebugCall(const DrawCmd& cmd);
+  std::vector<DrawCmd> list;
 };
 
 namespace UI7 {
@@ -65,7 +62,7 @@ void Label(const std::string& label, RD7TextFlags flags = 0);
 void Progressbar(float value);
 /// @brief Draw Image in Menu
 /// @param img Pointer f.e to RenderD7::Image2
-void Image(RenderD7::Image::Ref img);
+void Image(RenderD7::Image& img);
 void BrowserList(const std::vector<std::string>& entrys, int& selection,
                  RD7TextFlags txtflags = 0, R7Vec2 size = R7Vec2(0, 0),
                  int max_entrys = 13);
@@ -91,15 +88,15 @@ bool HandleScrolling(R7Vec2& pos, R7Vec2 size);
 bool InMenu();
 namespace Menu {
 // All of them return the Main BG DrawList if Menu is null
-UI7DrawList::Ref GetBackgroundList();
-UI7DrawList::Ref GetList();
-UI7DrawList::Ref GetForegroundList();
+UI7DrawList* GetBackgroundList();
+UI7DrawList* GetList();
+UI7DrawList* GetForegroundList();
 // Other Menu Specific Functions
 float GetScrollingOffset();
 void SetScrollingOffset(float off);
 bool IsScrolling();
 }  // namespace Menu
 // DrawLists
-UI7DrawList::Ref GetForegroundList();
-UI7DrawList::Ref GetBackgroundList();
+UI7DrawList* GetForegroundList();
+UI7DrawList* GetBackgroundList();
 }  // namespace UI7

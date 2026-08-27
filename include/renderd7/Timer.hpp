@@ -2,14 +2,11 @@
 
 #include <3ds.h>
 
-#include <renderd7/smart_ctor.hpp>
-
 namespace RenderD7 {
 class Timer {
  public:
   Timer(bool autostart = true);
   ~Timer() {}
-  RD7_SMART_CTOR(Timer)
   void Reset();
   void Tick();
   void Pause();

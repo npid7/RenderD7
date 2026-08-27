@@ -3,7 +3,6 @@
 
 #include <cstring>
 #include <memory>
-#include <renderd7/smart_ctor.hpp>
 #include <string>
 #include <vector>
 
@@ -72,7 +71,7 @@ class Theme {
   void Default();
   void Save(const std::string& path);
 
-  unsigned int Get(RD7Color clr);
+  unsigned int Get(RD7Color clr) const;
   void Set(RD7Color clr, unsigned int v);
   void Swap(RD7Color a, RD7Color b);
   bool Undo();
@@ -82,11 +81,9 @@ class Theme {
   void ClearHistory() { changes.clear(); }
 
   std::vector<unsigned int>& GetTableRef() { return clr_tab; }
-  // For Smart Pointer
-  RD7_SMART_CTOR(Theme);
 
   // Loader method
-  void CopyOther(Theme::Ref theme);
+  void CopyOther(const Theme& theme);
 
  private:
   struct change {
@@ -104,10 +101,10 @@ class Theme {
   std::vector<change> changes;
 };
 
-Theme::Ref ThemeActive();
+Theme& ThemeActive();
 /// @brief Change Theme Adress
-/// @param theme your adress
-void ThemeSet(Theme::Ref theme);
+/// @param theme your reference
+void ThemeSet(Theme& theme);
 namespace Color {
 /// @brief RGBA Class
 class RGBA {
@@ -134,8 +131,7 @@ class RGBA {
     m_a = ISIMPLEUNPAK(in, 24);
   }
   RGBA(RD7Color in) {
-    if (!RenderD7::ThemeActive()) return;
-    unsigned int col = RenderD7::ThemeActive()->Get(in);
+    unsigned int col = RenderD7::ThemeActive().Get(in);
     m_r = ISIMPLEUNPAK(col, 0);
     m_g = ISIMPLEUNPAK(col, 8);
     m_b = ISIMPLEUNPAK(col, 16);

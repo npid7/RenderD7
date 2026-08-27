@@ -107,15 +107,15 @@ void RenderD7::Theme::Default() {
   }
 }
 
-void RenderD7::Theme::CopyOther(Theme::Ref theme) {
+void RenderD7::Theme::CopyOther(const Theme& theme) {
   this->clr_tab.clear();
   this->clr_tab.resize(RD7Color_Len);
   for (int i = 0; i < (int)RD7Color_Len; i++) {
-    this->clr_tab[i] = theme->Get(i);
+    this->clr_tab[i] = theme.Get(i);
   }
 }
 
-unsigned int RenderD7::Theme::Get(RD7Color clr) {
+unsigned int RenderD7::Theme::Get(RD7Color clr) const {
   if (clr < 0 || clr >= RD7Color_Len) return 0;
   return this->clr_tab[clr];
 }
@@ -201,11 +201,9 @@ RenderD7::Color::RGBA2Hex(this->clr_tab[RD7Color_FrameBgHovered]); js["RD7Color_
   file.close();
 }
 
-RenderD7::Theme::Ref RenderD7::ThemeActive() { return rd7i_active_theme; }
+RenderD7::Theme& RenderD7::ThemeActive() { return rd7i_active_theme; }
 
-void RenderD7::ThemeSet(RenderD7::Theme::Ref theme) {
-  rd7i_active_theme = theme;
-}
+void RenderD7::ThemeSet(RenderD7::Theme& theme) { rd7i_active_theme = theme; }
 
 unsigned int RenderD7::Color::Hex(const std::string& color, uint8_t a) {
   if (color.length() < 7 ||

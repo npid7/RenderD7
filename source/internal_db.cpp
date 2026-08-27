@@ -57,17 +57,11 @@ float rd7_draw2_tsm = 1.2f;
 bool rd7i_amdt = false;
 void* rd7i_soc_buf = nullptr;
 bool rd7i_is_am_init = false;
-RenderD7::Theme::Ref rd7i_active_theme;
-RenderD7::LoggerBase::Ref rd7i_logger;
+RenderD7::Theme rd7i_active_theme;
+RenderD7::LoggerBase rd7i_logger;
 bool rd7i_lggrf = false;
 
-RenderD7::LoggerBase::Ref _rd7i_logger() {
-  if (!rd7i_logger) {
-    RenderD7::Error(
-        "You're trying to use a RenderD7 Func without Init RenderD7!");
-  }
-  return rd7i_logger;
-}
+RenderD7::LoggerBase& _rd7i_logger() { return rd7i_logger; }
 
 /// Global ///
 // Outdated HidApi (HidV2Patched)

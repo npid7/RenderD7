@@ -44,7 +44,7 @@ target_include_directories(renderd7 PUBLIC
     $<INSTALL_INTERFACE:include>
     $ENV{DEVKITPRO}/portlibs/3ds/include # Steht leider nicht in den toolchains drinne :/
 )
-
+target_compile_options(renderd7 PRIVATE -Wno-psabi)
 target_link_libraries(renderd7 PUBLIC
     curl mbedtls mbedx509 mbedcrypto # CURL related
     citro2d # Render2 / Draw2 requirement (can't tell what is the current engine :/)

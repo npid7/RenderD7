@@ -1,7 +1,7 @@
 #include <renderd7/Sprite.hpp>
 
-void RenderD7::Sprite::FromSheet(RenderD7::Sheet::Ref sheet, size_t index) {
-  C2D_SpriteFromSheet(&this->sprite, sheet->Get(), index);
+void RenderD7::Sprite::FromSheet(RenderD7::Sheet& sheet, size_t index) {
+  C2D_SpriteFromSheet(&this->sprite, sheet.Get(), index);
 }
 bool RenderD7::Sprite::Draw() {
   // Patch Depth before draw
@@ -44,8 +44,8 @@ void RenderD7::Sprite::SetRotCenter(R7Vec2 percentage) {
   C2D_SpriteSetCenter(&this->sprite, percentage.x, percentage.y);
 }
 
-void RenderD7::Sprite::FromImage(RenderD7::Image::Ref img) {
-  C2D_SpriteFromImage(&this->sprite, img->Get());
+void RenderD7::Sprite::FromImage(RenderD7::Image& img) {
+  C2D_SpriteFromImage(&this->sprite, img.Get());
 }
 
 void RenderD7::Sprite::SetScale(float x, float y) {

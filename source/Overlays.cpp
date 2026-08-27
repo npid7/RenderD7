@@ -399,7 +399,7 @@ void Ovl_Keyboard::Draw(void) const {
   R2::AddRect(R7Vec2(0, 112), R7Vec2(320, 128), RD7Color_FrameBg);
   R2::AddRect(R7Vec2(0, 112), R7Vec2(320, 20), RD7Color_Header);
   R2::AddText(R7Vec2(5, 114), "> " + *typed_text,
-              RenderD7::ThemeActive()->AutoText(RD7Color_Header));
+              RenderD7::ThemeActive().AutoText(RD7Color_Header));
   for (auto const& it : key_table) {
     R7Vec2 szs = it.size;
     R7Vec2 pos = it.pos;
@@ -441,7 +441,7 @@ void Ovl_Keyboard::Draw(void) const {
     R7Vec2 txtpos = R7Vec2(pos.x + szs.x * 0.5 - txtdim.x * 0.5,
                            pos.y + szs.y * 0.5 - txtdim.y * 0.5);
     R2::AddRect(pos, szs, btn);
-    R2::AddText(txtpos, it.disp, RenderD7::ThemeActive()->AutoText(btn));
+    R2::AddText(txtpos, it.disp, RenderD7::ThemeActive().AutoText(btn));
   }
   if (ft3 > 5) RenderD7::Hid::Lock();
   R2::SetTextSize(tmp_txt);

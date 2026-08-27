@@ -12,9 +12,9 @@ class ThemeEditor : public RenderD7::Scene {
   void Logic() override;
 
  private:
-  Theme::Ref edit_theme;
+  mutable Theme edit_theme;
   // Placeholder to save active one to
-  Theme::Ref temp_theme;
+  mutable Theme temp_theme;
 
   // temp vars for samples
   mutable bool cm;

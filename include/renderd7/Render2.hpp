@@ -6,7 +6,6 @@
 #include <renderd7/Image.hpp>
 #include <renderd7/R7Vec.hpp>
 #include <renderd7/Sprite.hpp>
-#include <renderd7/smart_ctor.hpp>
 
 #define MAKEFLAG(x) (1 << x)
 
@@ -37,8 +36,8 @@ class R2 {
     R7Vec2 ap;         //< Additional Pos
     unsigned int clr;  //< Color
     bool Screen;       //< TopScreen
-    Image::Ref img;    //< Image Reference
-    Sprite::Ref spr;   //< Sprite Reference
+    Image* img;        //< Image Reference
+    Sprite* spr;       //< Sprite Reference
     // 0 = skip, 1 = rect, 2 = tri, 3 = text,
     // 4 = image, 5 = sprite, 6 = Line
     int type;            //< Command Type
@@ -46,7 +45,6 @@ class R2 {
     // Text Specific
     RD7TextFlags flags;  // Text Flags
     std::string text;    // Text
-    RD7_SMART_CTOR(R2Cmd)
   };
   R2() = default;
   ~R2() = default;
@@ -54,8 +52,8 @@ class R2 {
   static void Init();
 
   // Settings
-  static void SetFont(Font::Ref fnt);
-  static Font::Ref GetFont();
+  static void SetFont(Font& fnt);
+  static Font& GetFont();
   static void DefaultFont();
   static void DrawNextLined();
   static void OnScreen(R2Screen screen);
@@ -79,19 +77,19 @@ class R2 {
                       RD7TextFlags flags = 0, R7Vec2 tmb = R7Vec2());
   static void AddText(R7Vec2 pos, const std::string& text, unsigned int clr,
                       RD7TextFlags flags = 0, R7Vec2 tmb = R7Vec2());
-  static void AddImage(R7Vec2 pos, Image::Ref img);
-  static void AddSprite(Sprite::Ref spr);
+  static void AddImage(R7Vec2 pos, Image& img);
+  static void AddSprite(Sprite& spr);
   static void AddLine(R7Vec2 pos_a, R7Vec2 pos_b, RD7Color clr, int t = 1);
   static void AddLine(R7Vec2 pos_a, R7Vec2 pos_b, unsigned int clr, int t = 1);
 
  private:
   static const float default_text_size;
   static float text_size;
-  static Font::Ref font;
+  static Font* font;
   static std::map<std::string, float> ts;
   static std::map<std::string, int> mln;
   static bool next_lined;
-  static std::vector<R2Cmd::Ref> commands;
+  static std::vector<R2Cmd> commands;
   static R2Screen current_screen;
 };
 }  // namespace RenderD7

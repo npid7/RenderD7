@@ -5,7 +5,6 @@
 #include <fstream>
 #include <memory>
 #include <renderd7/Error.hpp>
-#include <renderd7/smart_ctor.hpp>
 
 namespace RenderD7 {
 class Font {
@@ -13,7 +12,6 @@ class Font {
   Font() = default;
   Font(const std::string& path) { Load(path); };
   ~Font() { Unload(); }
-  RD7_SMART_CTOR(Font)
 
   void Load(const std::string& path) {
     std::ifstream ft(path, std::ios::in | std::ios::binary);

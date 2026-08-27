@@ -60,10 +60,10 @@ extern bool rd7i_graphics_on;
 extern bool rd7i_amdt;
 extern void* rd7i_soc_buf;
 extern bool rd7i_is_am_init;
-extern RenderD7::Theme::Ref rd7i_active_theme;
+extern RenderD7::Theme rd7i_active_theme;
 extern bool rd7i_lggrf;
 
 // Use function for protection
-RenderD7::LoggerBase::Ref _rd7i_logger();
+RenderD7::LoggerBase& _rd7i_logger();
 RenderD7::Net::Error rd7i_soc_init();
 void rd7i_soc_deinit();

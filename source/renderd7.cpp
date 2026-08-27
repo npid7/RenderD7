@@ -20,8 +20,8 @@
 #define RD7_VERSION 0x00090600
 #endif
 
-RenderD7::LoggerBase::Ref rd7i_glogger;
-extern RenderD7::LoggerBase::Ref rd7i_logger;
+RenderD7::LoggerBase rd7i_glogger;
+extern RenderD7::LoggerBase rd7i_logger;
 
 static void RD7i_ExitHook() {
   C2D_TextBufDelete(rd7i_text_buffer);
@@ -214,18 +214,12 @@ void rd7i_init_theme() {
 
   if (!RenderD7::FS::FileExist(path + "/renderd7.theme") || renew) {
     rd7i_amdt = true;
-    RenderD7::ThemeActive()->Save(path + "/renderd7.theme");
+    RenderD7::ThemeActive().Save(path + "/renderd7.theme");
     rd7i_amdt = false;
   }
 }
 
-RenderD7::LoggerBase::Ref RenderD7::Logger() {
-  if (!rd7i_glogger) {
-    RenderD7::Error("Logger Was Called before being Init!");
-    // return schould not be reached then
-  }
-  return rd7i_glogger;
-}
+RenderD7::LoggerBase& RenderD7::Logger() { return rd7i_glogger; }
 
 float RenderD7::GetDeltaTime() { return (float)rd7i_dtm; }
 
@@ -330,8 +324,6 @@ void RenderD7::Init::Graphics() {
 Result RenderD7::Init::Main(std::string app_name) {
   RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(Init::Main));
   rd7i_app_name = app_name;
-  rd7i_logger = LoggerBase::New();
-  rd7i_glogger = LoggerBase::New();
 
   rd7i_do_splash = (rd7_flags & RD7Flags_ShowSplash);
   rd7i_enable_scene_system = (rd7_flags & RD7Flags_SceneSystem);
@@ -351,14 +343,13 @@ Result RenderD7::Init::Main(std::string app_name) {
   romfsInit();
 
   rd7i_init_config();
-  _rd7i_logger()->Init("renderd7", rd7i_lggrf);
+  _rd7i_logger().Init("renderd7", rd7i_lggrf);
 
-  rd7i_active_theme = Theme::New();
-  rd7i_active_theme->Default();
+  rd7i_active_theme.Default();
 
   auto ret = rd7i_soc_init();
   if (ret) {
-    rd7i_logger->Write("Failed to Init Soc!");
+    rd7i_logger.Write("Failed to Init Soc!");
     RenderD7::PushMessage("RenderD7", "Failed to\nInit Soc!");
   } else {
     atexit(rd7i_soc_deinit);
@@ -400,8 +391,6 @@ Result RenderD7::Init::Main(std::string app_name) {
 Result RenderD7::Init::Minimal(std::string app_name) {
   RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(Init::Minimal));
   rd7i_app_name = app_name;
-  rd7i_logger = LoggerBase::New();
-  rd7i_glogger = LoggerBase::New();
 
   rd7i_do_splash = (rd7_flags & RD7Flags_ShowSplash);
   rd7i_enable_scene_system = (rd7_flags & RD7Flags_SceneSystem);
@@ -411,14 +400,14 @@ Result RenderD7::Init::Minimal(std::string app_name) {
   romfsInit();
 
   rd7i_init_config();
-  _rd7i_logger()->Init("renderd7", rd7i_lggrf);
+  _rd7i_logger().Init("renderd7", rd7i_lggrf);
 
-  rd7i_active_theme = Theme::New();
-  rd7i_active_theme->Default();
+  rd7i_active_theme.Default();
+  rd7i_active_theme.Default();
 
   auto ret = rd7i_soc_init();
   if (ret) {
-    rd7i_logger->Write("Failed to Init Soc!");
+    rd7i_logger.Write("Failed to Init Soc!");
     RenderD7::PushMessage("RenderD7", "Failed to\nInit Soc!");
   } else {
     atexit(rd7i_soc_deinit);
@@ -639,27 +628,27 @@ void RenderD7::RSettings::Draw(void) const {
                                            RD7Color_Header);
     UI7::GetBackgroundList()->AddText(
         R7Vec2(5, 2), "RenderD7 -> FTrace",
-        RenderD7::ThemeActive()->AutoText(RD7Color_Header));
+        RenderD7::ThemeActive().AutoText(RD7Color_Header));
     UI7::GetBackgroundList()->AddText(
         R7Vec2(395, 2), BuildInfo::GetVersion(),
-        RenderD7::ThemeActive()->AutoText(RD7Color_Header),
+        RenderD7::ThemeActive().AutoText(RD7Color_Header),
         RD7TextFlags_AlignRight);
     UI7::GetBackgroundList()->AddRectangle(
         R7Vec2(0, 220), R7Vec2(400, 20),
-        RenderD7::ThemeActive()->Get(RD7Color_Header));
+        RenderD7::ThemeActive().Get(RD7Color_Header));
     UI7::GetBackgroundList()->AddText(
         R7Vec2(5, 222),
         "Traces: " + std::to_string(ftrace_index + 1) + "/" +
             std::to_string(RenderD7::Ftrace::rd7_traces.size()),
-        RenderD7::ThemeActive()->AutoText(RD7Color_Header));
+        RenderD7::ThemeActive().AutoText(RD7Color_Header));
     UI7::GetBackgroundList()->AddRectangle(R7Vec2(0, 20), R7Vec2(400, 20),
                                            RD7Color_TextDisabled);
     UI7::GetBackgroundList()->AddText(
         R7Vec2(5, 22),
-        "Function:", RenderD7::ThemeActive()->AutoText(RD7Color_TextDisabled));
+        "Function:", RenderD7::ThemeActive().AutoText(RD7Color_TextDisabled));
     UI7::GetBackgroundList()->AddText(
         R7Vec2(395, 22),
-        "Time (ms):", RenderD7::ThemeActive()->AutoText(RD7Color_TextDisabled),
+        "Time (ms):", RenderD7::ThemeActive().AutoText(RD7Color_TextDisabled),
         RD7TextFlags_AlignRight);
 
     // List Bg
@@ -692,11 +681,11 @@ void RenderD7::RSettings::Draw(void) const {
                      : (ix % 2 == 0 ? RD7Color_List0 : RD7Color_List1);
       UI7::GetBackgroundList()->AddText(R7Vec2(5, 40 + (ix - start_index) * 15),
                                         it->second.func_name,
-                                        RenderD7::ThemeActive()->AutoText(clr));
+                                        RenderD7::ThemeActive().AutoText(clr));
       UI7::GetBackgroundList()->AddText(
           R7Vec2(395, 40 + (ix - start_index) * 15),
           RenderD7::MsTimeFmt(it->second.time_of),
-          RenderD7::ThemeActive()->AutoText(clr), RD7TextFlags_AlignRight);
+          RenderD7::ThemeActive().AutoText(clr), RD7TextFlags_AlignRight);
       ++it;
       ++ix;
     }
@@ -790,7 +779,7 @@ void RenderD7::RSettings::Draw(void) const {
     RenderD7::R2::OnScreen(R2Screen_Bottom);
     if (UI7::BeginMenu("Press \uE001 to go back!", R7Vec2(),
                        UI7MenuFlags_Scrolling)) {
-      for (auto& it : rd7i_logger->Lines()) UI7::Label(it, RD7TextFlags_Wrap);
+      for (auto& it : rd7i_logger.Lines()) UI7::Label(it, RD7TextFlags_Wrap);
       UI7::EndMenu();
     }
   }

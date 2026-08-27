@@ -1,6 +1,5 @@
 #pragma once
 #include <fstream>
-#include <renderd7/smart_ctor.hpp>
 #include <string>
 #include <vector>
 
@@ -13,7 +12,6 @@ class LoggerBase {
   LoggerBase() = default;
   /// @brief Deconstructor
   ~LoggerBase();
-  RD7_SMART_CTOR(LoggerBase)
   /// @brief Init the Logger
   /// @param filename name[_date_time.txt]
   void Init(const std::string& name, bool fileless = false);
