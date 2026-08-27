@@ -2,10 +2,3 @@
 *.DS_Store*
 .cache/
 compile_commands.json
-
-# DOCS
-docs/*
-!docs/javascripts
-!docs/overrides
-!docs/stylesheets
-site/*
