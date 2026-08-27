@@ -334,7 +334,6 @@ Result RenderD7::Init::Main(std::string app_name) {
 
   rd7i_do_splash = (rd7_flags & RD7Flags_ShowSplash);
   rd7i_enable_scene_system = (rd7_flags & RD7Flags_SceneSystem);
-  rd7i_enable_memtrack = (rd7_flags & RD7Flags_MemTrack);
 
   gfxInitDefault();
   atexit(gfxExit);
@@ -405,7 +404,6 @@ Result RenderD7::Init::Minimal(std::string app_name) {
 
   rd7i_do_splash = (rd7_flags & RD7Flags_ShowSplash);
   rd7i_enable_scene_system = (rd7_flags & RD7Flags_SceneSystem);
-  rd7i_enable_memtrack = (rd7_flags & RD7Flags_MemTrack);
 
   gfxInitDefault();
   atexit(gfxExit);
@@ -569,8 +567,6 @@ void RenderD7::RSettings::Draw(void) const {
       UI7::Label("App: " + rd7i_app_name);
       UI7::Label("RenderD7: " + std::string(BuildInfo::GetVersion(true)));
       UI7::Label("Citra: " + std::string(rd7i_is_citra ? "true" : "false"));
-      UI7::Label("Current: " + std::to_string(RenderD7::Memory::GetCurrent()) +
-                 "b");
       UI7::Label("Delta: " + std::to_string(RenderD7::GetDeltaTime()));
       UI7::Label("Kbd test: " + kbd_test);
       UI7::EndMenu();

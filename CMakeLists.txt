@@ -17,7 +17,6 @@ add_library(renderd7 STATIC
     source/lang.cpp
     source/LI7.cpp
     source/Logger.cpp
-    source/Memory.cpp
     source/Message.cpp
     source/Net.cpp
     source/nimg.cpp

@@ -3,6 +3,7 @@
 ## 0.9.6
 
 - Replace RENDERD7VSTRING with RenderD7::BuildInfo::GetVersion()
+- Remove MemTrack
 
 ## 0.9.5
 

@@ -14,7 +14,7 @@ void Restart();
 using RD7Flags = int;
 enum RD7Flags_ {
   RD7Flags_None = 0,
-  RD7Flags_MemTrack = 1 << 0,
+  RD7Flags_Unused = 1 << 0,
   RD7Flags_SceneSystem = 1 << 1,
   RD7Flags_ShowSplash = 1 << 2,
   RD7Flags_Default = RD7Flags_SceneSystem,

@@ -20,7 +20,6 @@
 #include <renderd7/FunctionTrace.hpp>
 #include <renderd7/Hardware.hpp>
 #include <renderd7/Logger.hpp>
-#include <renderd7/Memory.hpp>
 #include <renderd7/Overlays.hpp>
 #include <renderd7/Ovl.hpp>
 #include <renderd7/Render2.hpp>

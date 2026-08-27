@@ -200,9 +200,6 @@ struct pak32 {
     rtime = n8;
     cpu = n9;
     gpu = n10;
-    mem_alloc = n11;
-    mem_dalloc = n12;
-    mem_ialloc = n13;
     tbs = n14;
   }
   uint32_t magic;
@@ -217,9 +214,6 @@ struct pak32 {
   float rtime;
   float cpu;
   float gpu;
-  unsigned int mem_alloc;
-  unsigned int mem_dalloc;
-  unsigned int mem_ialloc;
   unsigned int tbs;
 };
 
@@ -244,13 +238,11 @@ void ServerThread(RenderD7::Parameter param) {
     }
     if (cmd == 1) {
       rd7i_reacttion(1);
-      auto pak = pak32(
-          rd7i_app_name, rd7i_framerate, rd7i_console_model, rd7i_system_region,
-          rd7i_is_citra, rd7i_is_ndsp, rd7i_settings, rd7i_dtm, rd7i_time,
-          C3D_GetProcessingTime(), C3D_GetDrawingTime(),
-          RenderD7::Memory::GetTotalAllocated(),
-          RenderD7::Memory::GetTotalFreed(), RenderD7::Memory::GetCurrent(),
-          C2D_TextBufGetNumGlyphs(rd7i_text_buffer));
+      auto pak = pak32(rd7i_app_name, rd7i_framerate, rd7i_console_model,
+                       rd7i_system_region, rd7i_is_citra, rd7i_is_ndsp,
+                       rd7i_settings, rd7i_dtm, rd7i_time,
+                       C3D_GetProcessingTime(), C3D_GetDrawingTime(), 0, 0, 0,
+                       C2D_TextBufGetNumGlyphs(rd7i_text_buffer));
       server.snd(stupid(pak));
     } else if (cmd == 2) {
       rd7i_reacttion(2);
