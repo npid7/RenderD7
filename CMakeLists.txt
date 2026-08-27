@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.22)
 
 project(renderd7 VERSION 0.9.5 LANGUAGES CXX)
 
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;MinSizeRel;RelWithDebInfo" CACHE STRING "Available build types" FORCE)
+
 add_library(renderd7 STATIC
     source/Color.cpp
     source/Error.cpp
@@ -31,7 +33,6 @@ add_library(renderd7 STATIC
     source/stb.cpp
     source/swr.cpp
     source/Tasks.cpp
-    source/Tasks.cpp
     source/ThemeEditor.cpp
     source/thread.cpp
     source/Time.cpp
@@ -40,7 +41,8 @@ add_library(renderd7 STATIC
 )
 
 target_include_directories(renderd7 PUBLIC
-    include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
     $ENV{DEVKITPRO}/portlibs/3ds/include # Steht leider nicht in den toolchains drinne :/
 )
 target_compile_definitions(renderd7 PRIVATE _GNU_SOURCE=1) # required for vasprintf (to be removed)
@@ -53,6 +55,28 @@ target_link_libraries(renderd7 PUBLIC
     m # base requirement for maths (oder so steh teigentlich in den toolchains schon drinne btw)
 )
 set_target_properties(renderd7 PROPERTIES
-    CMAKE_CXX_STANDARD 17 # Minimum für den momentanen stand
-    CMAKE_CXX_STANDARD_REQUIRED true
+    CXX_STANDARD 17 # Minimum für den momentanen stand
+    CXX_STANDARD_REQUIRED true
+    DEBUG_POSTFIX "d"
+    MINSIZEREL_POSTFIX "ms"
+    RELWITHDEBINFO_POSTFIX "rd"
 )
+
+include(GNUInstallDirs)
+install(TARGETS renderd7
+    EXPORT renderd7-targets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+install(EXPORT renderd7-targets
+    FILE renderd7Targets.cmake
+    NAMESPACE renderd7::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/renderd7
+)
+
+set(CPACK_GENERATOR "TZST") # cause i like .tar.zst
+include(CPack)
