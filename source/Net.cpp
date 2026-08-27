@@ -10,6 +10,7 @@
 #include <regex>
 #include <renderd7/Net.hpp>
 #include <renderd7/internal_db.hpp>
+#include <renderd7/renderd7.hpp>
 
 static RenderD7::Net::Error rd7i_check_wifi() {
   // if (rd7i_is_citra) return 0;
@@ -52,9 +53,8 @@ static int rd7i_handle_curl_progress(CURL* hnd, curl_off_t dltotal,
 
 static void rd7i_setup_curl_context(CURL* hnd, const std::string& url,
                                     void* userptr, bool mem) {
-  std::string user_agent =
-      rd7i_app_name + "/RenderD7 (Version: " + std::string(RENDERD7VSTRING) +
-      ")";
+  std::string user_agent = rd7i_app_name + "/RenderD7 (Version: " +
+                           std::string(RenderD7::BuildInfo::GetVersion()) + ")";
 
   if (!mem) {
     curl_easy_setopt(hnd, CURLOPT_FAILONERROR, 1L);

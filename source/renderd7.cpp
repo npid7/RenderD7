@@ -14,6 +14,11 @@
 #include <filesystem>
 #include <random>
 
+// Major Minor Micro Patch
+#ifndef RD7_VERSION
+#define RD7_VERSION 0x00090600
+#endif
+
 RenderD7::LoggerBase::Ref rd7i_glogger;
 extern RenderD7::LoggerBase::Ref rd7i_logger;
 
@@ -162,7 +167,7 @@ void rd7i_init_config() {
     }
     rd7i_config.clear();
     rd7i_config["info"]["version"] = CFGVER;
-    rd7i_config["info"]["renderd7ver"] = RENDERD7VSTRING;
+    rd7i_config["info"]["renderd7ver"] = RenderD7::BuildInfo::GetVersion();
     rd7i_config["metrik-settings"]["show"] = false;
     rd7i_config["metrik-settings"]["Screen"] = true;
     rd7i_config["metrik-settings"]["Text"] = "#ffffffff";
@@ -558,11 +563,11 @@ void RenderD7::RSettings::Draw(void) const {
     RenderD7::R2::OnScreen(R2Screen_Top);
     if (UI7::BeginMenu("RenderD7 -> Settings")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
-      UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
+      UI7::Label(BuildInfo::GetVersion(), RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
       UI7::Label("Config Version: " + std::string(CFGVER));
       UI7::Label("App: " + rd7i_app_name);
-      UI7::Label("RenderD7: " + std::string(RENDERD7VSTRING));
+      UI7::Label("RenderD7: " + std::string(BuildInfo::GetVersion(true)));
       UI7::Label("Citra: " + std::string(rd7i_is_citra ? "true" : "false"));
       UI7::Label("Current: " + std::to_string(RenderD7::Memory::GetCurrent()) +
                  "b");
@@ -605,7 +610,7 @@ void RenderD7::RSettings::Draw(void) const {
     RenderD7::R2::OnScreen(R2Screen_Top);
     if (UI7::BeginMenu("RenderD7 -> Debugger")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
-      UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
+      UI7::Label(BuildInfo::GetVersion(), RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
       UI7::Label("Server Running: " +
                  std::string(rd7i_idb_running ? "true" : "false"));
@@ -639,7 +644,7 @@ void RenderD7::RSettings::Draw(void) const {
         R7Vec2(5, 2), "RenderD7 -> FTrace",
         RenderD7::ThemeActive()->AutoText(RD7Color_Header));
     UI7::GetBackgroundList()->AddText(
-        R7Vec2(395, 2), RENDERD7VSTRING,
+        R7Vec2(395, 2), BuildInfo::GetVersion(),
         RenderD7::ThemeActive()->AutoText(RD7Color_Header),
         RD7TextFlags_AlignRight);
     UI7::GetBackgroundList()->AddRectangle(
@@ -719,7 +724,7 @@ void RenderD7::RSettings::Draw(void) const {
     RenderD7::R2::OnScreen(R2Screen_Top);
     if (UI7::BeginMenu("RenderD7 -> UI7")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
-      UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
+      UI7::Label(BuildInfo::GetVersion(), RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
       UI7::Label("Time: " + std::to_string(UI7::GetTime()));
       UI7::Label("Delta: " + std::to_string(UI7::GetDeltaTime() * 1000.f));
@@ -755,7 +760,7 @@ void RenderD7::RSettings::Draw(void) const {
     RenderD7::R2::OnScreen(R2Screen_Top);
     if (UI7::BeginMenu("RenderD7 -> Overlays")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
-      UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
+      UI7::Label(BuildInfo::GetVersion(), RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
       UI7::Label("Metrik Overlay: " + mtovlstate);
       UI7::Label("Metrik Screen: " + mtscreenstate);
@@ -780,7 +785,7 @@ void RenderD7::RSettings::Draw(void) const {
     RenderD7::R2::OnScreen(R2Screen_Top);
     if (UI7::BeginMenu("RenderD7 -> Logs")) {
       UI7::SetCursorPos(R7Vec2(395, 2));
-      UI7::Label(RENDERD7VSTRING, RD7TextFlags_AlignRight);
+      UI7::Label(BuildInfo::GetVersion(), RD7TextFlags_AlignRight);
       UI7::RestoreCursor();
       UI7::EndMenu();
     }
@@ -919,4 +924,49 @@ std::string RenderD7::GetDataDirectory() {
   if (!std::filesystem::is_directory(dir))
     std::filesystem::create_directories(dir);
   return dir;
+}
+
+/** Make the version to strign at compiletime */
+constexpr std::array<char, 16> __rd7i_mk_vstr(bool withpatch) {
+  std::array<char, 16> ret{};
+  int limit = withpatch ? 4 : 3;
+  unsigned char ver[4] = {
+      (RD7_VERSION >> 24) & 0xFF,  // Major
+      (RD7_VERSION >> 16) & 0xFF,  // Minor
+      (RD7_VERSION >> 8) & 0xFF,   // Micro
+      (RD7_VERSION) & 0xFF         // Patch
+  };
+
+  int idx = 0;
+  for (int i = 0; i < limit; ++i) {
+    unsigned char v = ver[i];
+    if (v == 0) {
+      ret[idx++] = '0';
+    } else {
+      unsigned char t = v;
+      int len = 0;
+      while (t > 0) {
+        t /= 10;
+        ++len;
+      }
+
+      t = v;
+      for (int j = len - 1; j >= 0; --j) {
+        ret[idx + j] = '0' + (t % 10);
+        t /= 10;
+      }
+      idx += len;
+    }
+    if (i < limit - 1) {
+      ret[idx++] = (i == 2) ? '-' : '.';
+    }
+  }
+  ret[idx] = '\0';
+  return ret;
+}
+
+const char* RenderD7::BuildInfo::GetVersion(bool withpatch) {
+  static constexpr auto v = __rd7i_mk_vstr(false);
+  static constexpr auto vp = __rd7i_mk_vstr(true);
+  return withpatch ? vp.data() : v.data();
 }

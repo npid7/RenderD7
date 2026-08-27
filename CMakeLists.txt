@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(renderd7 VERSION 0.9.5 LANGUAGES CXX)
+project(renderd7 VERSION 0.9.6 LANGUAGES CXX)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;MinSizeRel;RelWithDebInfo" CACHE STRING "Available build types" FORCE)
 
@@ -60,6 +60,12 @@ set_target_properties(renderd7 PROPERTIES
     DEBUG_POSTFIX "d"
     MINSIZEREL_POSTFIX "ms"
     RELWITHDEBINFO_POSTFIX "rd"
+)
+target_compile_definitions(renderd7 PRIVATE
+    "RD7_VERSION=(($<IF:$<BOOL:${PROJECT_VERSION_MAJOR}>,${PROJECT_VERSION_MAJOR},0> << 24) | \
+                  ($<IF:$<BOOL:${PROJECT_VERSION_MINOR}>,${PROJECT_VERSION_MINOR},0> << 16) | \
+                  ($<IF:$<BOOL:${PROJECT_VERSION_PATCH}>,${PROJECT_VERSION_PATCH},0> << 8)  | \
+                   $<IF:$<BOOL:${PROJECT_VERSION_TWEAK}>,${PROJECT_VERSION_TWEAK},0>)"
 )
 
 include(GNUInstallDirs)

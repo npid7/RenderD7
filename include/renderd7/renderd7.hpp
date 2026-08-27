@@ -35,8 +35,6 @@
 #include <renderd7/stringtool.hpp>
 #include <renderd7/thread.hpp>
 
-#define RENDERD7VSTRING "0.9.5"
-
 #define DEFAULT_CENTER 0.5f
 
 /// @param rd7_max_objects Config Param for C2D Mac objects
@@ -193,4 +191,7 @@ std::string GetAppDirectory();
 /// @brief returns path to the Data Directory
 /// @return data dir path
 std::string GetDataDirectory();
+namespace BuildInfo {
+const char* GetVersion(bool withpatch = false);
+}
 }  // namespace RenderD7

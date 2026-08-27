@@ -1,5 +1,9 @@
 # RenderD7 Changelog
 
+## 0.9.6
+
+- Replace RENDERD7VSTRING with RenderD7::BuildInfo::GetVersion()
+
 ## 0.9.5
 
 - Remove Npi Intro and NVID Api

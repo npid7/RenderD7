@@ -303,7 +303,7 @@ void Ovl_Metrik::Draw(void) const {
   R2::DefaultTextSize();
   R2::OnScreen(i_screen[0] ? R2Screen_Bottom : R2Screen_Top);
   std::string info =
-      "RenderD7 " + std::string(RENDERD7VSTRING) + " Debug Overlay";
+      "RenderD7 " + std::string(BuildInfo::GetVersion()) + " Debug Overlay";
   float dim_y = R2::GetTextDimensions(info).y;
   float infoy = 240 - dim_y;
   mt_fps = "FPS: " + RenderD7::GetFramerate();
