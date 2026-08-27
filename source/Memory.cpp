@@ -6,23 +6,23 @@ static RenderD7::Memory::memory_metrics metrics;
 
 bool rd7i_enable_memtrack;
 
-void *operator new(size_t size) {
-  void *ptr = malloc(size);
+void* operator new(size_t size) {
+  void* ptr = malloc(size);
   if (rd7i_enable_memtrack) metrics.t_TotalAllocated += size;
   return ptr;
 }
 
-void operator delete(void *memory, size_t size) {
+void operator delete(void* memory, size_t size) {
   if (rd7i_enable_memtrack) metrics.t_TotalFreed += size;
   free(memory);
 }
 
 int allocations = 0;
 int total_size = 0;
-std::map<void *, size_t> sizes;
+std::map<void*, size_t> sizes;
 
-void *operator new[](size_t size) {
-  void *ptr = malloc(size);
+void* operator new[](size_t size) {
+  void* ptr = malloc(size);
   if (rd7i_enable_memtrack) {
     allocations++;
     total_size += size;
@@ -33,7 +33,7 @@ void *operator new[](size_t size) {
   return ptr;
 }
 
-void operator delete[](void *ptr) {
+void operator delete[](void* ptr) {
   if (rd7i_enable_memtrack) {
     allocations--;
     total_size -= sizes[ptr];

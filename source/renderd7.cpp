@@ -77,7 +77,7 @@ void Npifade() {
 void PushSplash() {
   RenderD7::Ftrace::ScopedTrace st("rd7-core", f2s(PushSplash));
   C2D_SpriteSheet sheet;
-  sheet = C2D_SpriteSheetLoadFromMem((void *)renderd7_logo, renderd7_logo_size);
+  sheet = C2D_SpriteSheetLoadFromMem((void*)renderd7_logo, renderd7_logo_size);
   // Display for 2 Sec
   for (int x = 0; x < 120; x++) {
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
@@ -491,7 +491,7 @@ int RenderD7::GetRandomInt(int b, int e) {
   return r;
 }
 
-bool RenderD7::FS::FileExist(const std::string &path) {
+bool RenderD7::FS::FileExist(const std::string& path) {
   return std::filesystem::exists(path) &&
          std::filesystem::is_regular_file(path);
 }
@@ -788,7 +788,7 @@ void RenderD7::RSettings::Draw(void) const {
     RenderD7::R2::OnScreen(R2Screen_Bottom);
     if (UI7::BeginMenu("Press \uE001 to go back!", R7Vec2(),
                        UI7MenuFlags_Scrolling)) {
-      for (auto &it : rd7i_logger->Lines()) UI7::Label(it, RD7TextFlags_Wrap);
+      for (auto& it : rd7i_logger->Lines()) UI7::Label(it, RD7TextFlags_Wrap);
       UI7::EndMenu();
     }
   }
@@ -796,7 +796,7 @@ void RenderD7::RSettings::Draw(void) const {
 
 void RenderD7::RSettings::Logic() {
   /// Requests
-  for (const auto &it : shared_request) {
+  for (const auto& it : shared_request) {
     if (it.first == 0x00000001) {
       m_state = (RState)it.second;
     } else if (it.first == 0x00000002) {

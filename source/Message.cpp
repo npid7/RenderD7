@@ -56,7 +56,7 @@ void ProcessMessages() {
       R2::AddText(pos + R7Vec2(5, 17), msg_lst[i]->message, tc);
       if (rd7i_debugging)
         R2::AddText(pos + R7Vec2(155, 1),
-                      std::to_string(msg_lst[i]->animationframe), tc);
+                    std::to_string(msg_lst[i]->animationframe), tc);
       // Why Frameadd? because Message uses int as frame and
       // It seems that lower 0.5 will be rounded to 0
       // Why not replace int with float ?
@@ -81,7 +81,7 @@ void ProcessMessages() {
   R2::SetTextSize(tmp_txt);
 }
 
-void PushMessage(const Message &msg) {
+void PushMessage(const Message& msg) {
   msg_lst.push_back(std::make_shared<RenderD7::Message>(msg));
 }
 

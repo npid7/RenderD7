@@ -55,7 +55,7 @@ bool rd7i_idb_running = false;
 bool rd7i_graphics_on = false;
 float rd7_draw2_tsm = 1.2f;
 bool rd7i_amdt = false;
-void *rd7i_soc_buf = nullptr;
+void* rd7i_soc_buf = nullptr;
 bool rd7i_is_am_init = false;
 RenderD7::Theme::Ref rd7i_active_theme;
 RenderD7::LoggerBase::Ref rd7i_logger;
@@ -82,9 +82,9 @@ int rd7_max_objects = C2D_DEFAULT_MAX_OBJECTS;
 bool rd7i_do_splash = false;
 bool rd7i_enable_scene_system = true;
 bool rd7i_debugging = false;
-C3D_RenderTarget *rd7_top;
-C3D_RenderTarget *rd7_top_right;
-C3D_RenderTarget *rd7_bottom;
+C3D_RenderTarget* rd7_top;
+C3D_RenderTarget* rd7_top_right;
+C3D_RenderTarget* rd7_bottom;
 
 RenderD7::Net::Error rd7i_soc_init() {
   if (rd7i_soc_buf != nullptr) {
@@ -94,7 +94,7 @@ RenderD7::Net::Error rd7i_soc_init() {
   if (!rd7i_soc_buf) {
     return RenderD7::Net::Error_Memory;
   }
-  Result ret = socInit((u32 *)rd7i_soc_buf, 0x100000);
+  Result ret = socInit((u32*)rd7i_soc_buf, 0x100000);
   if (R_FAILED(ret)) {
     free(rd7i_soc_buf);
     return ((static_cast<RenderD7::Net::Error>(ret) << 32) |
@@ -116,7 +116,7 @@ class Logger {
   Logger() = default;
   virtual ~Logger() = default;
 
-  static void log(const std::string &prefix, const std::string &message) {
+  static void log(const std::string& prefix, const std::string& message) {
     std::cout << "[" << prefix << "]: " << message << std::endl;
   }
 };
@@ -126,7 +126,7 @@ class Logger {
 
 class tcp_server {
  public:
-  tcp_server(const std::string &ip, int port) {
+  tcp_server(const std::string& ip, int port) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
       rd7_err("Unable to create socket!");
@@ -136,7 +136,7 @@ class tcp_server {
     server.sin_port = port;
     server.sin_addr.s_addr = inet_addr(ip.c_str());
 
-    e = bind(sockfd, (struct sockaddr *)&server, sizeof(server));
+    e = bind(sockfd, (struct sockaddr*)&server, sizeof(server));
     if (e == -1) {
       rd7_err("Unable to bind!");
       return;
@@ -149,7 +149,7 @@ class tcp_server {
       return;
     }
     addr_size = sizeof(new_addr);
-    new_sock = accept(sockfd, (struct sockaddr *)&new_addr, &addr_size);
+    new_sock = accept(sockfd, (struct sockaddr*)&new_addr, &addr_size);
     std::cout << "Connected" << std::endl;
   }
   ~tcp_server() {
@@ -158,13 +158,13 @@ class tcp_server {
 
   bool reconnect() {
     close(new_sock);
-    new_sock = accept(sockfd, (struct sockaddr *)&new_addr, &addr_size);
+    new_sock = accept(sockfd, (struct sockaddr*)&new_addr, &addr_size);
     return true;
   }
 
-  size_t snd(void *ptr, size_t size) { return send(new_sock, ptr, size, 0); }
+  size_t snd(void* ptr, size_t size) { return send(new_sock, ptr, size, 0); }
 
-  size_t rec(void *ptr, size_t size) { return recv(new_sock, ptr, size, 0); }
+  size_t rec(void* ptr, size_t size) { return recv(new_sock, ptr, size, 0); }
 
  private:
   int e, sockfd, new_sock;
@@ -181,7 +181,7 @@ class tcp_server {
 
 struct pak32 {
   pak32() {}
-  pak32(const std::string &n0, float n1, unsigned char n2, unsigned char n3,
+  pak32(const std::string& n0, float n1, unsigned char n2, unsigned char n3,
         bool n4, bool n5, bool n6, float n7, float n8, float n9, float n10,
         unsigned int n11, unsigned int n12, unsigned int n13,
         unsigned int n14) {

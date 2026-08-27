@@ -64,14 +64,14 @@ std::string RenderD7::Lang::GetSys() {
       break;
   }
 }
-std::string RenderD7::Lang::Get(const std::string &key) {
+std::string RenderD7::Lang::Get(const std::string& key) {
   if (!appJson.contains("keys")) return "ERR-01";
   nlohmann::json js = appJson["keys"];
   if (!js.contains(key)) return key;
   return js.at(key).get<std::string>();
 }
 
-void RenderD7::Lang::Load(const std::string &lang) {
+void RenderD7::Lang::Load(const std::string& lang) {
   std::fstream values;
   if (std::filesystem::exists("romfs:/lang/" + lang + "/app.json")) {
     values.open("romfs:/lang/" + lang + "/app.json", std::ios::in);

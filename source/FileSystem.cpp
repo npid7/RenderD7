@@ -10,8 +10,8 @@
 #include <filesystem>
 #include <renderd7/stringtool.hpp>
 
-bool ___dir__predicate__(const RenderD7::FileSystem::Entry &lhs,
-                         const RenderD7::FileSystem::Entry &rhs) {
+bool ___dir__predicate__(const RenderD7::FileSystem::Entry& lhs,
+                         const RenderD7::FileSystem::Entry& rhs) {
   if (!lhs.dir && rhs.dir) return false;
   if (lhs.dir && !rhs.dir) return true;
   std::string a = lhs.name;
@@ -41,7 +41,7 @@ std::string RenderD7::FileSystem::GetParentPath(std::string path,
 std::vector<RenderD7::FileSystem::Entry> RenderD7::FileSystem::GetDirContent(
     std::string path) {
   std::vector<RenderD7::FileSystem::Entry> res;
-  for (const auto &entry :
+  for (const auto& entry :
        std::filesystem::directory_iterator(std::filesystem::path(path))) {
     res.push_back({entry.path().string(), GetFileName(entry.path().string()),
                    entry.is_directory()});
@@ -51,9 +51,9 @@ std::vector<RenderD7::FileSystem::Entry> RenderD7::FileSystem::GetDirContent(
 
 std::vector<RenderD7::FileSystem::Entry>
 RenderD7::FileSystem::GetDirContentsExt(
-    std::string &path, const std::vector<std::string> &extensions) {
+    std::string& path, const std::vector<std::string>& extensions) {
   std::vector<RenderD7::FileSystem::Entry> res;
-  for (auto const &it :
+  for (auto const& it :
        std::filesystem::directory_iterator(std::filesystem::path(path))) {
     RenderD7::FileSystem::Entry temp;
     std::string fn = it.path().string();

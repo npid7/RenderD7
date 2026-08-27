@@ -15,9 +15,9 @@ static u32 __rd7i_gp2o__(u32 v) {
   return (v >= 64 ? v : 64);
 }
 
-static void __rd7i_r24r32(std::vector<uint8_t> &out,
-                          const std::vector<uint8_t> &in, const int &w,
-                          const int &h) {
+static void __rd7i_r24r32(std::vector<uint8_t>& out,
+                          const std::vector<uint8_t>& in, const int& w,
+                          const int& h) {
   // Converts RGB24 to RGBA32
   for (int y = 0; y < h; y++) {
     for (int x = 0; x < w; x++) {
@@ -31,8 +31,8 @@ static void __rd7i_r24r32(std::vector<uint8_t> &out,
   }
 }
 
-static void __rd7i_maketex__(C3D_Tex *tex, Tex3DS_SubTexture *sub,
-                             std::vector<unsigned char> &buf, int w, int h) {
+static void __rd7i_maketex__(C3D_Tex* tex, Tex3DS_SubTexture* sub,
+                             std::vector<unsigned char>& buf, int w, int h) {
   if (!tex || !sub) {
     _rd7i_logger()->Write("Invalid Inpit (objects have no adress!)");
     return;
@@ -77,7 +77,7 @@ static void __rd7i_maketex__(C3D_Tex *tex, Tex3DS_SubTexture *sub,
                     4;
       int src_pos = (y * w + x) * 4;
 
-      memcpy(&((unsigned char *)tex->data)[dst_pos], &buf[src_pos], 4);
+      memcpy(&((unsigned char*)tex->data)[dst_pos], &buf[src_pos], 4);
     }
   }
 
@@ -88,13 +88,13 @@ static void __rd7i_maketex__(C3D_Tex *tex, Tex3DS_SubTexture *sub,
 
 namespace RenderD7 {
 
-void Image::Load(const std::string &path) {
+void Image::Load(const std::string& path) {
   // Make sure to cleanup
   Delete();
   ext = false;
   // Setup Func and Load Data
   int w, h, c = 0;
-  unsigned char *image = stbi_load(path.c_str(), &w, &h, &c, 4);
+  unsigned char* image = stbi_load(path.c_str(), &w, &h, &c, 4);
   if (image == nullptr) {
     //_rd7i_logger()->Write("Failed to Load Image: " + path);
     return;
@@ -120,21 +120,21 @@ void Image::Load(const std::string &path) {
     stbi_image_free(image);
   }
   // Create C2D_Image
-  C3D_Tex *tex = new C3D_Tex;
-  Tex3DS_SubTexture *subtex = new Tex3DS_SubTexture;
+  C3D_Tex* tex = new C3D_Tex;
+  Tex3DS_SubTexture* subtex = new Tex3DS_SubTexture;
   __rd7i_maketex__(tex, subtex, wimg, w, h);
   _rd7i_logger()->Write(RenderD7::FormatString("Created Texture (%d, %d)",
                                                tex->width, tex->height));
   img = {tex, subtex};
 }
 
-void Image::From_NIMG(const nimg &image) {
+void Image::From_NIMG(const nimg& image) {
   // Make sure to cleanup
   Delete();
   ext = false;
   if (image.width > 1024 || image.height > 1024) return;
-  C3D_Tex *tex = new C3D_Tex;
-  Tex3DS_SubTexture *subtex = new Tex3DS_SubTexture;
+  C3D_Tex* tex = new C3D_Tex;
+  Tex3DS_SubTexture* subtex = new Tex3DS_SubTexture;
   std::vector<unsigned char> mdpb = image.pixel_buffer;
   __rd7i_maketex__(tex, subtex, mdpb, image.width, image.height);
   img = {tex, subtex};
@@ -146,14 +146,14 @@ C2D_Image Image::Get() {
   }
   return img;
 }
-C2D_Image &Image::GetRef() {
+C2D_Image& Image::GetRef() {
   if (!Loadet()) {
     _rd7i_logger()->Write("Image not Loadet!");
   }
   return img;
 }
 
-void Image::Set(const C2D_Image &i) {
+void Image::Set(const C2D_Image& i) {
   Delete();
   ext = true;
   img = i;

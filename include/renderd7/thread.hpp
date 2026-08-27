@@ -108,10 +108,10 @@ class Thread {
   struct ThreadData {
     RenderD7::Parameter m_parameter;
     std::function<void(RenderD7::Parameter)> m_function;
-    std::atomic<bool> *m_running;
+    std::atomic<bool>* m_running;
   };
 
-  static void threadFunction(void *t_arg);
+  static void threadFunction(void* t_arg);
   /* data */
   int m_priority, m_stackSize;
   bool m_started;

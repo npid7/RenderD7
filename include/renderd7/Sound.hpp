@@ -13,7 +13,7 @@ class Sound {
   /// \param path Path to the .wav file
   /// \param channel the channel 1-23
   /// \param toloop true:loop the sound, false: don't loop
-  Sound(const std::string &path, int channel = 1, bool toloop = false);
+  Sound(const std::string& path, int channel = 1, bool toloop = false);
   /// @brief Deconstructor
   ~Sound();
   RD7_SMART_CTOR(Sound)
@@ -28,7 +28,7 @@ class Sound {
   /// \param waveBuf For ndsp
   ndspWaveBuf waveBuf;
   /// \param data Memmory data of the sound
-  uint8_t *data = NULL;
+  uint8_t* data = NULL;
   /// \param chnl Channel of the sound
   int chnl;
 };

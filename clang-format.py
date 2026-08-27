@@ -7,7 +7,7 @@ def fmt_file(path):
         if Path(path).is_dir():
              return # Skip
         try:
-            subprocess.run(['clang-format', '-i', path, '--style=Google'], check=True)
+            subprocess.run(['clang-format', '-i', path, '--style=file'], check=True)
         except subprocess.CalledProcessError as e:
             print('Error for ' + Path(path).stem + ': ' + e)
 

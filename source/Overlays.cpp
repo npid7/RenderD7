@@ -280,7 +280,7 @@ void Ovl_Ftrace::Draw(void) const {
   for (size_t i = 0; i < (dt.size() < 10 ? dt.size() : 10); i++) {
     R2::AddText(R7Vec2(5, 30 + i * 15), dt[i].func_name, RD7Color_Text);
     R2::AddText(R7Vec2(295, 30 + i * 15), RenderD7::MsTimeFmt(dt[i].time_of),
-                  RD7Color_Text);
+                RD7Color_Text);
   }
   R2::SetTextSize(tmp_txt);
 }
@@ -329,46 +329,42 @@ void Ovl_Metrik::Draw(void) const {
              RenderD7::FormatBytes(RenderD7::Memory::GetTotalAllocated()) +
              " | " + RenderD7::FormatBytes(RenderD7::Memory::GetTotalFreed());
   R2::AddRect(R7Vec2(0, 0), R2::GetTextDimensions(mt_fps),
-                (unsigned int)i_mt_color[0]);
+              (unsigned int)i_mt_color[0]);
   R2::AddRect(R7Vec2(0, 50), R2::GetTextDimensions(mt_cpu),
-                (unsigned int)i_mt_color[0]);
+              (unsigned int)i_mt_color[0]);
   R2::AddRect(R7Vec2(0, 50 + dim_y * 1), R2::GetTextDimensions(mt_gpu),
-                (unsigned int)i_mt_color[0]);
+              (unsigned int)i_mt_color[0]);
   R2::AddRect(R7Vec2(0, 50 + dim_y * 2), R2::GetTextDimensions(mt_cmd),
-                (unsigned int)i_mt_color[0]);
+              (unsigned int)i_mt_color[0]);
   R2::AddRect(R7Vec2(0, 50 + dim_y * 3), R2::GetTextDimensions(mt_lfr),
-                (unsigned int)i_mt_color[0]);
+              (unsigned int)i_mt_color[0]);
   R2::AddRect(R7Vec2(0, 50 + dim_y * 4), R2::GetTextDimensions(mt_tbs),
-                (unsigned int)i_mt_color[0]);
+              (unsigned int)i_mt_color[0]);
   if (rd7i_enable_memtrack)
     R2::AddRect(R7Vec2(0, 50 + dim_y * 5), R2::GetTextDimensions(mt_mem),
-                  (unsigned int)i_mt_color[0]);
-  R2::AddRect(R7Vec2(0, infoy), R2::GetTextDimensions(info),
                 (unsigned int)i_mt_color[0]);
+  R2::AddRect(R7Vec2(0, infoy), R2::GetTextDimensions(info),
+              (unsigned int)i_mt_color[0]);
   R2::AddText(R7Vec2(0, 0), mt_fps, (unsigned int)i_txt_color[0]);
   R2::AddText(R7Vec2(0, 50), mt_cpu, (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 1), mt_gpu,
-                (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 2), mt_cmd,
-                (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 3), mt_lfr,
-                (unsigned int)i_txt_color[0]);
-  R2::AddText(R7Vec2(0, 50 + dim_y * 4), mt_tbs,
-                (unsigned int)i_txt_color[0]);
+  R2::AddText(R7Vec2(0, 50 + dim_y * 1), mt_gpu, (unsigned int)i_txt_color[0]);
+  R2::AddText(R7Vec2(0, 50 + dim_y * 2), mt_cmd, (unsigned int)i_txt_color[0]);
+  R2::AddText(R7Vec2(0, 50 + dim_y * 3), mt_lfr, (unsigned int)i_txt_color[0]);
+  R2::AddText(R7Vec2(0, 50 + dim_y * 4), mt_tbs, (unsigned int)i_txt_color[0]);
   if (rd7i_enable_memtrack)
     R2::AddText(R7Vec2(0, 50 + dim_y * 5), mt_mem,
-                  (unsigned int)i_txt_color[0]);
+                (unsigned int)i_txt_color[0]);
   R2::AddText(R7Vec2(0, infoy), info, (unsigned int)i_txt_color[0]);
 
   // Force Bottom (Debug Touchpos)
   R2::OnScreen(R2Screen_Bottom);
   if (Hid::IsEvent("touch", Hid::Held)) {
     R2::AddLine(R7Vec2(Hid::GetTouchPosition().x, 0),
-                  R7Vec2(Hid::GetTouchPosition().x, 240),
-                  RenderD7::Color::Hex("#ff0000"));
+                R7Vec2(Hid::GetTouchPosition().x, 240),
+                RenderD7::Color::Hex("#ff0000"));
     R2::AddLine(R7Vec2(0, Hid::GetTouchPosition().y),
-                  R7Vec2(320, Hid::GetTouchPosition().y),
-                  RenderD7::Color::Hex("#ff0000"));
+                R7Vec2(320, Hid::GetTouchPosition().y),
+                RenderD7::Color::Hex("#ff0000"));
   }
   R2::SetTextSize(tmp_txt);
 }
@@ -407,14 +403,14 @@ void Ovl_Keyboard::Draw(void) const {
     key_table = keyboard_layout_shift;
   R2::OnScreen(R2Screen_Top);
   R2::AddRect(R7Vec2(0, 0), R7Vec2(400, 240),
-                RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
+              RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
   R2::OnScreen(R2Screen_Bottom);
   R2::AddRect(R7Vec2(0, 0), R7Vec2(320, 112),
-                RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
+              RenderD7::Color::RGBA(RD7Color_FrameBg).changeA(150).toRGBA());
   R2::AddRect(R7Vec2(0, 112), R7Vec2(320, 128), RD7Color_FrameBg);
   R2::AddRect(R7Vec2(0, 112), R7Vec2(320, 20), RD7Color_Header);
   R2::AddText(R7Vec2(5, 114), "> " + *typed_text,
-                RenderD7::ThemeActive()->AutoText(RD7Color_Header));
+              RenderD7::ThemeActive()->AutoText(RD7Color_Header));
   for (auto const& it : key_table) {
     R7Vec2 szs = it.size;
     R7Vec2 pos = it.pos;

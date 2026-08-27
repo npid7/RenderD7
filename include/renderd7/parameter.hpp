@@ -26,38 +26,38 @@ class Parameter {
   struct base {
     virtual ~base() {}
     virtual bool is(id) const = 0;
-    virtual base *copy() const = 0;
-  } *p = nullptr;
+    virtual base* copy() const = 0;
+  }* p = nullptr;
 
   template <typename T>
   struct data : base, std::tuple<T> {
     using std::tuple<T>::tuple;
 
-    T &get() & { return std::get<0>(*this); }
-    T const &get() const & { return std::get<0>(*this); }
+    T& get() & { return std::get<0>(*this); }
+    T const& get() const& { return std::get<0>(*this); }
 
     bool is(id i) const override { return i == type_id<T>(); }
-    base *copy() const override { return new data{get()}; }
+    base* copy() const override { return new data{get()}; }
   };
 
   template <typename T>
-  T &stat() {
-    return static_cast<data<T> &>(*p).get();
+  T& stat() {
+    return static_cast<data<T>&>(*p).get();
   }
 
   template <typename T>
-  T const &stat() const {
-    return static_cast<data<T> const &>(*p).get();
+  T const& stat() const {
+    return static_cast<data<T> const&>(*p).get();
   }
 
   template <typename T>
-  T &dyn() {
-    return dynamic_cast<data<T> &>(*p).get();
+  T& dyn() {
+    return dynamic_cast<data<T>&>(*p).get();
   }
 
   template <typename T>
-  T const &dyn() const {
-    return dynamic_cast<data<T> const &>(*p).get();
+  T const& dyn() const {
+    return dynamic_cast<data<T> const&>(*p).get();
   }
 
  public:
@@ -75,31 +75,31 @@ class Parameter {
    * @brief Copy constructor
    * @param s The Parameter to copy
    */
-  Parameter(Parameter &&s) : p{s.p} { s.p = nullptr; }
+  Parameter(Parameter&& s) : p{s.p} { s.p = nullptr; }
 
   /**
    * @brief Const copy constructor
    * @param s The Parameter to copy
    */
-  Parameter(Parameter const &s) : p{s.p->copy()} {}
+  Parameter(Parameter const& s) : p{s.p->copy()} {}
 
   /**
    * @brief Initializes the Parameter with the given value
    * @param x The value to initialize the Parameter with
    */
   template <typename T, typename U = decay<T>, typename = none<U>>
-  Parameter(T &&x) : p{new data<U>{std::forward<T>(x)}} {}
+  Parameter(T&& x) : p{new data<U>{std::forward<T>(x)}} {}
 
   /**
    * @brief Overloads the assignment operator
    * @param s The value to set the Parameter to
    */
-  Parameter &operator=(Parameter s) {
+  Parameter& operator=(Parameter s) {
     swap(*this, s);
     return *this;
   }
 
-  friend void swap(Parameter &s, Parameter &r) { std::swap(s.p, r.p); }
+  friend void swap(Parameter& s, Parameter& r) { std::swap(s.p, r.p); }
 
   /**
    * @brief Clears the Parameter
@@ -127,7 +127,7 @@ class Parameter {
    * value, it will result in undefined behaviour.
    */
   template <typename T>
-  T &get() & {
+  T& get() & {
     return stat<T>();
   }
 };

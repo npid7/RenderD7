@@ -29,9 +29,9 @@ extern touchPosition d7_touch;
 
 // Modern Global Api
 extern int rd7_max_objects;
-extern C3D_RenderTarget *rd7_top;
-extern C3D_RenderTarget *rd7_top_right;
-extern C3D_RenderTarget *rd7_bottom;
+extern C3D_RenderTarget* rd7_top;
+extern C3D_RenderTarget* rd7_top_right;
+extern C3D_RenderTarget* rd7_bottom;
 extern RD7Flags rd7_flags;
 
 // Draw2

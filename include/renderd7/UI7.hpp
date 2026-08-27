@@ -29,9 +29,9 @@ class UI7DrawList {
   void AddRectangle(R7Vec2 pos, R7Vec2 szs, unsigned int clr);
   void AddTriangle(R7Vec2 pos0, R7Vec2 pos1, R7Vec2 pos2, RD7Color clr);
   void AddTriangle(R7Vec2 pos0, R7Vec2 pos1, R7Vec2 pos2, unsigned int clr);
-  void AddText(R7Vec2 pos, const std::string &text, RD7Color clr,
+  void AddText(R7Vec2 pos, const std::string& text, RD7Color clr,
                RD7TextFlags flags = 0, R7Vec2 box = R7Vec2());
-  void AddText(R7Vec2 pos, const std::string &text, unsigned int clr,
+  void AddText(R7Vec2 pos, const std::string& text, unsigned int clr,
                RD7TextFlags flags = 0, R7Vec2 box = R7Vec2());
   void AddImage(R7Vec2 pos, RenderD7::Image::Ref img);
   void AddCall(std::shared_ptr<DrawCmd> cmd);
@@ -53,32 +53,32 @@ void Deinit();
 void Update();
 float GetTime();
 float GetDeltaTime();
-bool &IsDebugging();
+bool& IsDebugging();
 // Internal Function
 // Should not be used
 void Debug();
-bool &DebugMenu();
+bool& DebugMenu();
 
-bool Button(const std::string &label, R7Vec2 size = R7Vec2(0, 0));
-void Checkbox(const std::string &label, bool &c);
-void Label(const std::string &label, RD7TextFlags flags = 0);
+bool Button(const std::string& label, R7Vec2 size = R7Vec2(0, 0));
+void Checkbox(const std::string& label, bool& c);
+void Label(const std::string& label, RD7TextFlags flags = 0);
 void Progressbar(float value);
 /// @brief Draw Image in Menu
 /// @param img Pointer f.e to RenderD7::Image2
 void Image(RenderD7::Image::Ref img);
-void BrowserList(const std::vector<std::string> &entrys, int &selection,
+void BrowserList(const std::vector<std::string>& entrys, int& selection,
                  RD7TextFlags txtflags = 0, R7Vec2 size = R7Vec2(0, 0),
                  int max_entrys = 13);
-void InputText(const std::string &label, std::string &text,
-               const std::string &hint = "");
-bool BeginMenu(const std::string &title, R7Vec2 size = R7Vec2(0, 0),
+void InputText(const std::string& label, std::string& text,
+               const std::string& hint = "");
+bool BeginMenu(const std::string& title, R7Vec2 size = R7Vec2(0, 0),
                UI7MenuFlags flags = 0);
 void EndMenu();
-void Grid(const std::string &name, const R7Vec2 &size, const R7Vec2 &entry_size,
-          void (*display_func)(void *, R7Vec2), void **data_array,
+void Grid(const std::string& name, const R7Vec2& size, const R7Vec2& entry_size,
+          void (*display_func)(void*, R7Vec2), void** data_array,
           size_t num_entrys);
-void ColorSelector(const std::string &label, unsigned int &color);
-bool BeginTree(const std::string &text);
+void ColorSelector(const std::string& label, unsigned int& color);
+bool BeginTree(const std::string& text);
 void EndTree();
 R7Vec2 GetCursorPos();
 void SetCursorPos(R7Vec2 cp);
@@ -87,7 +87,7 @@ void SameLine();
 // Internal API (For Creating Custom Objects)
 bool InBox(R7Vec2 inpos, R7Vec2 boxpos, R7Vec2 boxsize);
 void MoveCursor(R7Vec2 size);
-bool HandleScrolling(R7Vec2 &pos, R7Vec2 size);
+bool HandleScrolling(R7Vec2& pos, R7Vec2 size);
 bool InMenu();
 namespace Menu {
 // All of them return the Main BG DrawList if Menu is null

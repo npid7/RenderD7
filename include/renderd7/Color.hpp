@@ -68,9 +68,9 @@ class Theme {
   Theme() = default;
   ~Theme() = default;
 
-  void Load(const std::string &path);
+  void Load(const std::string& path);
   void Default();
-  void Save(const std::string &path);
+  void Save(const std::string& path);
 
   unsigned int Get(RD7Color clr);
   void Set(RD7Color clr, unsigned int v);
@@ -81,7 +81,7 @@ class Theme {
   RD7Color AutoText(RD7Color bg);
   void ClearHistory() { changes.clear(); }
 
-  std::vector<unsigned int> &GetTableRef() { return clr_tab; }
+  std::vector<unsigned int>& GetTableRef() { return clr_tab; }
   // For Smart Pointer
   RD7_SMART_CTOR(Theme);
 
@@ -141,24 +141,24 @@ class RGBA {
     m_b = ISIMPLEUNPAK(col, 16);
     m_a = ISIMPLEUNPAK(col, 24);
   }
-  RGBA &changeR(unsigned char r) {
+  RGBA& changeR(unsigned char r) {
     m_r = r;
     return *this;
   }
-  RGBA &changeG(unsigned char g) {
+  RGBA& changeG(unsigned char g) {
     m_g = g;
     return *this;
   }
-  RGBA &changeB(unsigned char b) {
+  RGBA& changeB(unsigned char b) {
     m_b = b;
     return *this;
   }
-  RGBA &changeA(unsigned char a) {
+  RGBA& changeA(unsigned char a) {
     m_a = a;
     return *this;
   }
 
-  RGBA &fade_to(const RGBA &color, float p) {
+  RGBA& fade_to(const RGBA& color, float p) {
     m_a =
         m_a + static_cast<unsigned char>((color.m_a - m_a) * ((p + 1.0f) / 2));
     m_b =
@@ -199,6 +199,6 @@ std::string RGB2Hex(int r, int g, int b);
 /// @param color
 /// @param a
 /// @return Color32
-unsigned int Hex(const std::string &color, unsigned char a = 255);
+unsigned int Hex(const std::string& color, unsigned char a = 255);
 }  // namespace Color
 }  // namespace RenderD7

@@ -1,7 +1,6 @@
 #include <renderd7/thread.hpp>
 namespace RenderD7 {
-Thread::Thread() : m_started(false), m_running(false) { /* do nothing */
-}
+Thread::Thread() : m_started(false), m_running(false) { /* do nothing */ }
 
 Thread::Thread(std::function<void(RenderD7::Parameter)> t_function,
                RenderD7::Parameter t_parameter, bool t_autostart,
@@ -68,9 +67,9 @@ void Thread::sleep(int t_milliseconds) {
 }
 
 // private methods
-void Thread::threadFunction(void *arg) {
+void Thread::threadFunction(void* arg) {
   RenderD7::Thread::ThreadData data =
-      *static_cast<RenderD7::Thread::ThreadData *>(arg);
+      *static_cast<RenderD7::Thread::ThreadData*>(arg);
   data.m_function(data.m_parameter);
   *data.m_running = false;
 }

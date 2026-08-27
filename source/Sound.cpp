@@ -24,7 +24,7 @@ typedef struct _WavHeader {
 static_assert(sizeof(WavHeader) == 44, "WavHeader size is not 44 bytes.");
 
 using namespace RenderD7;
-Sound::Sound(const string &path, int channel, bool toloop) {
+Sound::Sound(const string& path, int channel, bool toloop) {
   if (rd7i_is_ndsp) {
     ndspSetOutputMode(NDSP_OUTPUT_STEREO);
     ndspSetOutputCount(2);  // Num of buffers
@@ -38,7 +38,7 @@ Sound::Sound(const string &path, int channel, bool toloop) {
     }
 
     WavHeader wavHeader;
-    fp.read(reinterpret_cast<char *>(&wavHeader), sizeof(WavHeader));
+    fp.read(reinterpret_cast<char*>(&wavHeader), sizeof(WavHeader));
     size_t read = fp.tellg();
     if (read != sizeof(wavHeader)) {
       // Short read.
@@ -71,9 +71,9 @@ Sound::Sound(const string &path, int channel, bool toloop) {
     dataSize -= sizeof(WavHeader);
 
     // Allocating and reading samples
-    data = static_cast<u8 *>(linearAlloc(dataSize));
+    data = static_cast<u8*>(linearAlloc(dataSize));
     fp.seekg(44, std::ios::beg);
-    fp.read(reinterpret_cast<char *>(data), dataSize);
+    fp.read(reinterpret_cast<char*>(data), dataSize);
     fp.close();
     dataSize /= 2;  // FIXME: 16-bit or stereo?
 
@@ -95,7 +95,7 @@ Sound::Sound(const string &path, int channel, bool toloop) {
     // Create and play a wav buffer
     memset(&waveBuf, 0, sizeof(waveBuf));
 
-    waveBuf.data_vaddr = reinterpret_cast<u32 *>(data);
+    waveBuf.data_vaddr = reinterpret_cast<u32*>(data);
     waveBuf.nsamples = dataSize / (wavHeader.bits_per_sample >> 3);
     waveBuf.looping = toloop;
     waveBuf.status = NDSP_WBUF_FREE;

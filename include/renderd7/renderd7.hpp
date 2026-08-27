@@ -164,7 +164,7 @@ namespace FS {
 /// @brief Check if File exists
 /// @param path Path to the File
 /// @return exists or not
-bool FileExist(const std::string &path);
+bool FileExist(const std::string& path);
 }  // namespace FS
 
 /// @brief Check if Ndsp is Init
