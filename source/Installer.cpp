@@ -23,6 +23,7 @@ Result DeletePrevious(u64 id, FS_MediaType mt) {
 
   for (u32 i = 0; i < read_titles; i++) {
     if (ids[i] == id) {
+      ret = AM_DeleteUserTitle(mt, id);
       // ret = AM_DeleteAppTitle(mt, id);
       break;
     }
