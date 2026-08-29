@@ -215,7 +215,7 @@ static bool rd7i_idb_fp = false;
 
 void KillIdbServer() {
   rd7i_idb_fp = true;
-  rd7i_idb_server.join(100);
+  rd7i_idb_server.Join(100);
 }
 
 void ServerThread(RenderD7::Parameter param) {
@@ -261,8 +261,8 @@ namespace RenderD7 {
 namespace IDB {
 void Start() {
   if (rd7i_idb_running) return;
-  rd7i_idb_server.initialize(ServerThread);
-  rd7i_idb_server.start(true);
+  rd7i_idb_server.Init(ServerThread);
+  rd7i_idb_server.Start(true);
 }
 void Stop() {
   if (!rd7i_idb_running) return;
