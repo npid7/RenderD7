@@ -191,7 +191,7 @@ void R2::Process() {
         line++;
       }
     } else if (it.type == 4) {
-      if (it.img->Loadet()) {
+      if (it.img->Loaded()) {
         C2D_DrawImageAt(it.img->Get(), it.pos.x, it.pos.y, 0.5f);
       }
     } else if (it.type == 5) {

@@ -142,14 +142,14 @@ void Image::From_NIMG(const nimg& image) {
 }
 
 C2D_Image Image::Get() {
-  if (!Loadet()) {
-    _rd7i_logger().Write("Image not Loadet!");
+  if (!Loaded()) {
+    _rd7i_logger().Write("Image not Loaded!");
   }
   return img;
 }
 C2D_Image& Image::GetRef() {
-  if (!Loadet()) {
-    _rd7i_logger().Write("Image not Loadet!");
+  if (!Loaded()) {
+    _rd7i_logger().Write("Image not Loaded!");
   }
   return img;
 }
@@ -178,5 +178,5 @@ void Image::Delete() {
   }
 }
 
-bool Image::Loadet() { return (img.subtex != nullptr && img.tex != nullptr); }
+bool Image::Loaded() { return (img.subtex != nullptr && img.tex != nullptr); }
 }  // namespace RenderD7

@@ -22,7 +22,7 @@ class Image {
   C2D_Image& GetRef();
   void Set(const C2D_Image& i);
   R7Vec2 GetSize();
-  bool Loadet();
+  bool Loaded();
 
  private:
   bool ext = false;
