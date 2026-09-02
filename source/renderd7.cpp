@@ -362,6 +362,11 @@ Result RenderD7::Init::Main(std::string app_name) {
 
   Hardware::Initialisize();
 
+  // Check if citra
+  s64 citracheck = 0;
+  svcGetSystemInfo(&citracheck, 0x20000, 0);
+  rd7i_is_citra = citracheck ? true : false;
+
   C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
   atexit(C3D_Fini);
   C2D_Init((size_t)rd7_max_objects);
